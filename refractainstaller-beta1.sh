@@ -9,6 +9,37 @@ exec 2>"$error_log"
 
 rsync_excludes="/home/user/exclude.list"
 
+#added by me, MT:
+if  [[ -z  $rsync_excludes ]] &&  [[ -z  ./exclude_list ]] 
+then
+    rsync_excludes="./exclude.list"
+    cat > "$rsync_excludes" <<-EOF
+    /dev/*
+    /cdrom/*
+    /media/*
+    /target
+    /swapfile
+    /mnt/*
+    /sys/*
+    /proc/*
+    /tmp/*
+    /live
+    /boot/grub/grub.cfg
+    /boot/grub/menu.lst
+    /boot/grub/device.map
+    /etc/udev/rules.d/70-persistent-cd.rules
+    /etc/udev/rules.d/70-persistent-net.rules
+    /etc/fstab
+    /etc/mtab
+    /home/snapshot/
+EOF
+else
+	echo "file exists" 
+fi 
+
+
+exit 0
+
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
