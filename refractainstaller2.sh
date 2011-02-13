@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 # refractainstaller2.sh
+# Copyright 2011 fsmithred@gmail.com
+# Licence: GPL-3
+# This is free software with no warrantees. Use at your own risk.
 
-###  run it as:  ./refractainstaller2.sh | tee install_log.txt
+# This script will install a refracta live-cd to a hard drive. It gives
+# you the option to install the entire system to one partition or to
+# install with /home on a separate partition. 
 
-# This one includes option for separate /home partition. (not yet)
-# TODO
-# Add variable $home_dev
-# Add /home/* to excludes - this could be appended after the file is made.
-# Add second rsync command, and make sure to exclude /home/snapshot 
-# - this could run only if user answers yes, maybe a separate variable that 
-# acts as a switch. Then if $
-
+# If you want a log of the installation process, run the script as:
+#     ./refractainstaller2.sh | tee install_log.txt
+#
+# NOTE: right now, errors are logged to error_log in the directory
+# where the script is running. If this script gets put someplace like
+# /usr/bin or other system directory, we need to put the error log
+# someplace convenient for the user to find it, along with a message
+# telling the user where it is.
+ 
 
 error_log="error_log.txt"
 exec 2>"$error_log"
@@ -108,12 +114,14 @@ home_dev=
 fs_type_home=
 
 echo -n "
+
  Where would you like the GRUB bootloader to be installed?
  (probably a drive, like /dev/sda): "
 read grub_dev
 [[ -b $grub_dev ]] || { echo "$grub_dev does not exist!" ; exit 1 ; }
 
 echo -n "
+
  Which partition would you like to use for the installation
  of the operating system?
  
@@ -124,6 +132,7 @@ read install_dev
 # Choose filesystem type for OS.
 while true; do
     echo -n "
+    
  What type of filesystem would you like on $install_dev?
  
  Choices (enter number):
@@ -140,6 +149,7 @@ while true; do
 done
 
 echo -n "
+
   If you created a separate partition for /home, 
   enter the full device name. However, if you're 
   installing everything to one partition, you should
@@ -147,11 +157,23 @@ echo -n "
 
   /home partition (if one exists): "
 read home_dev
-[[ -b $home_dev ]] || { echo "$home_dev does not exist!" ; exit 1 ; }
+if ! [[ -z $home_dev ]] && ! [[ -b $home_dev ]] ; then
+    echo "
+    $home_dev does not exist!
+    You may continue and install everything to one partition,
+    or you can hit ctrl-c to exit, then re-run the script, and
+    be sure to create a partition for /home.
+    "
+    home_dev=
+    echo "Press ENTER when you're ready to continue"
+    read -p " "
+fi
 
-# Choose filesystem type for /home
-while true; do
-    echo -n "
+# Choose filesystem type for /home if needed
+if ! [[ -z $home_dev ]] ; then
+    while true; do
+        echo -n "
+        
  What type of filesystem would you like on $home_dev?
  
  Choices (enter number):
@@ -159,15 +181,17 @@ while true; do
     2) ext3
     3) ext4
    "
-    read ans
-    case $ans in
-      1) fs_type_home="ext2" ; break ;;
-      2) fs_type_home="ext3" ; break ;;
-      3) fs_type_home="ext4" ; break ;;
-    esac
-done
+        read ans
+        case $ans in
+          1) fs_type_home="ext2" ; break ;;
+          2) fs_type_home="ext3" ; break ;;
+          3) fs_type_home="ext4" ; break ;;
+        esac
+    done
+fi
 
-#just in case, cleanup first
+
+# just in case, cleanup first
 echo -e "\n Preparing for installation...\n"
 if $(df | grep -q /target/proc/) ; then
     umount /target/proc/
@@ -194,14 +218,14 @@ if [[ -d /target_home ]] ; then
     rm -rf /target_home
 fi
 
-#make mount point, format, adjust reserve and mount
+# make mount point, format, adjust reserve and mount
 echo -e "\n Creating filesystem...\n"
 mkdir /target ;  check_exit 
 mke2fs -t $fs_type_os $install_dev ; check_exit 
 tune2fs -r 10000 $install_dev ; check_exit 
 mount $install_dev /target ; check_exit 
 
-#make mount point for separate home if needed
+# make mount point for separate home if needed
 if ! [[ -z $home_dev ]] ; then
     mkdir /target_home ; check_exit
     mke2fs -t $fs_type_home $home_dev ; check_exit
@@ -210,23 +234,23 @@ if ! [[ -z $home_dev ]] ; then
     echo "- /home/*" >> "$rsync_excludes"
 fi
 
-#copy everything over except the things listed in the exclude list
+# copy everything over except the things listed in the exclude list
 echo -e "\n Copying system to new partition...\n"
 rsync -a / /target/ --exclude-from="$rsync_excludes" ; check_exit 
 
-#copy separate /home if needed
+# copy separate /home if needed
 echo -e "\n Copying home folders to new partition...\n"
 if ! [[ -z $home_dev ]] ; then
     rsync -a /home/ /target_home/ --exclude=/home/snapshot ; check exit
 fi
 
-#create swap
+# create swap
 echo -e "\n Making a swap file...\n"
 dd if=/dev/zero of=/target/swapfile bs=1048 count=256000 ; check_exit 
 mkswap /target/swapfile ; check_exit 
 
 
-#copy the real update-initramfs back in place
+# copy the real update-initramfs back in place
 echo -e "\n Copying update-initramfs...\n"
 if [[ -f /target/usr/sbin/update-initramfs.distrib ]] ; then
     cp /target/usr/sbin/update-initramfs.distrib /target/usr/sbin/update-initramfs
@@ -235,7 +259,7 @@ if [[ /target/usr/sbin/update-initramfs.debian ]] ; then
     cp /target/usr/sbin/update-initramfs.debian /target/usr/sbin/update-initramfs
 fi
 
-#setup fstab
+# setup fstab
 echo -e "\n Creating /etc/fstab...\n"
 echo -e "proc\t\t/proc\tproc\tdefaults\t0\t0
 /swapfile\tswap\tswap\tdefaults\t0\t0
@@ -249,20 +273,20 @@ if ! [[ -z $home_dev ]] ; then
     check_exit
 fi
 
-#mount stuff so grub will behave
+# mount stuff so grub will behave
 echo -e "\n Mounting tmpfs and proc...\n"
 mount -t tmpfs --bind /dev/ /target/dev/ ; check_exit 
 mount -t proc --bind /proc/ /target/proc/ ; check_exit 
 mount -t sysfs --bind /sys/ /target/sys/ ; check_exit 
 
 
-#setup grub
+# setup grub
 echo -e "\n Installing the boot loader...\n"
 chroot /target grub-install $grub_dev ; check_exit 
 chroot /target update-grub ; check_exit 
 
 
-#cleanup
+# cleanup
 echo -e "\n Cleaning up...\n"
 umount /target/proc/ ; check_exit 
 umount /target/dev/ ; check_exit 
