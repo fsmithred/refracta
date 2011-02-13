@@ -181,7 +181,7 @@ fi
 echo -e "\n Creating /etc/fstab...\n"
 echo -e "proc\t\t/proc\tproc\tdefaults\t0\t0" > /target/etc/fstab
 echo -e "/swapfile\tswap\tswap\tdefaults\t0\t0" >> /target/etc/fstab
-echo -e "$install_dev\t/\text3\tdefaults,noatime\t0\t1" >> /target/etc/fstab
+echo -e "$install_dev\t/\t$fs_type\tdefaults,noatime\t0\t1" >> /target/etc/fstab
 check_exit
 
 #mount stuff so grub will behave
