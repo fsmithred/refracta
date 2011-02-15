@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mkunlive.sh
+# mkunlive.sh  (Refracta Aunt Martha version)
 # Change user name from user to something else, for a live-build system
 # that was installed with refractainstaller.
 # Run once as user from $HOME with no arguments
@@ -17,17 +17,12 @@ help_text="
         $0  <newname>  <oldname>
         "
 
+# function to exit the script if there are errors
 check_exit () {
-if  [[ $? -ne 0 ]]
-then
-    echo "
-    An error occured
-    "
-    echo
-    exit 0
-fi 
+[[ $? -eq 0 ]] || { echo "Exit due to error:  $?" ; exit 1 ; }
 }
 
+:<<HOLD
 replace_inittab () {
 echo "# /etc/inittab: init(8) configuration.
 # inittabreplacement
@@ -108,14 +103,15 @@ po::powerokwait:/etc/init.d/powerfail stop
 
 " > ./inittab.new
 }
-
+HOLD
 
 prepare_unlive () {          
 sudo passwd
 check_exit
 
 # copy the script to /root if it's not already there
-if ! [[ -f /root/${0##*/} ]] ; then
+#if ! [[ -f /root/${0##*/} ]] ; then   # this does not work in refracta; user doesn't have permission
+if ! $(sudo ls /root | grep -q ${0##*/}) ; then
     echo "    /root/${0##*/} does not exist.
     Copying..."
     sleep 4
@@ -125,6 +121,7 @@ if ! [[ -f /root/${0##*/} ]] ; then
     sleep 6
 fi
 
+:<<HOLD
 # make a backup copy of /etc/inittab if one doesn't exist
 if ! [[ -f /root/inittab.old ]]; then
     echo "    /root/inittab.old does not exist.
@@ -154,6 +151,7 @@ else
     rm ./inittab.new
     check_exit
 fi
+HOLD
 
 # drop to runlevel 1 to log out user from tty1-6
 echo "
@@ -167,15 +165,18 @@ exit 0
 # First run
 # If not root, then do the following stuff:
 if ! [[ $(id -un) = "root" ]] ; then
+    while true; do
     echo "
    You're not root. This must be the first run of mkunlive. It will 
-   create root password, copy script to /root, backup /etc/inittab
-   to /root, and replace /etc/inittab to disable auto-login.
+   let you create a root password, copy itself to /root, and then drop
+   to single-user mode (runlevel 1), where you can login as root 
+   and run the script again. If you need to get out of this script
+   before it kills your running desktop (for instance, to save some
+   open files) answer \"no\" now, and run the script when you're ready.
     
    Continue?    (y/n)
     "
     read ans
-    while true; do
         case $ans in
           [Yy]*) prepare_unlive ;;
           [Nn]*) exit 0 ;;
@@ -189,6 +190,7 @@ if [[ $(id -un) = "root" ]] ; then
     echo "
     You are root. This must be the second run of this script.
     Create new user, edit /etc/sudoers, return to runlevel 2"
+    sleep 3
 fi
 
 # check runlevel
@@ -214,26 +216,45 @@ echo "    Changing user name and group...
 sleep 2
 
 # Change user name and group
-usermod -l $newname $oldname
-groupmod -n $newname $oldname
-usermod -d /home/$newname -m $newname
-check_exit
+usermod -l $newname $oldname ; check_exit
+groupmod -n $newname $oldname ; check_exit
+usermod -d /home/$newname -m $newname ; check_exit
 
 # Show that it was done
 echo "
-  Checking that the name has been changed...
+    Checking that the name has been changed...
   "
 sleep 2
 if ! id $oldname  >/dev/null 2>&1 ; then
-    echo "$oldname has been deleted."
+    echo "
+    $oldname has been deleted.
+    "
 else
-    echo "Something is wrong. $oldname still exists"
+    echo "    Something is wrong. $oldname still exists"
+    exit 1
 fi
 sleep 3
-echo "$newname is in these groups:"
-echo $(id $newname)
-echo
-sleep 6
+echo "
+    Checking $newname's group memberships:
+    "
+if ! id $newname ; then
+    exit 1
+fi
+sleep 3
+
+# Ask to change newuser's password.
+while true; do
+    echo "
+    Do you want to give $newname a new password?
+    (yes or no)
+    "
+    read ans
+    case $ans in
+      [Yy]*) passwd $newname ; break ;;
+      [Nn]*) break ;;
+    esac
+done
+
 
 # This might need to be added. I only had to do it when I changed
 # the user name manually.
@@ -246,15 +267,17 @@ sleep 6
 #echo
 #sleep 3
 
-echo "  You may need to edit the properties of desktop icons for 
-  terminal, file manager, browser and maybe text editor. 
-  (Just reset the working directory.) 
+echo "
+    This script will attempt to replace every instance of 
+    /home/$oldname with /home/$newname in your user's config files.
   
-  This script will attempt to replace every instance of 
-  /home/$oldname with /home/$newname in your user's config files.
+    You may need to edit the properties of desktop icons for 
+    terminal, file manager, browser and maybe text editor. 
+    (Just reset the working directory.) 
+
     "
   
-read -p  "  Press the ENTER key when you're ready to proceed."
+read -p  "    Press the ENTER key when you're ready to proceed."
 
 for i in $(grep -r "/home/$oldname" /home/$newname/.config | awk -F":" ' { print $1 }')
 do
@@ -262,32 +285,35 @@ do
     check_exit
 done
 
+:<<HOLD
 # Edit /etc/gdm3/daemon.conf
-echo "
+while true; do
+    echo "
     Edit /etc/gdm3/daemon.conf to disable graphical auto-login?
     If you don't do this, gdm3 will hang. If that happens, you can
     reboot in recovery mode and issue the command:
     update-rc.d -f gdm3 remove
     log out as root and log in as your user. Start the desktop with:
     startx
-    
-    Edit daemon.conf?  (yes or no)"
-read ans
-while true; do
+
+    Edit daemon.conf?  (yes or no)
+    "
+    read ans
     case $ans in
       [Yy]*) nano /etc/gdm3/daemon.conf ; break ;;
       [Nn]*) break ;;
     esac
 done
+HOLD
 
 # Edit /etc/sudoers
-echo "
+while true; do
+    echo "
     Edit /etc/sudoers?  (yes or no)
     You need to comment out the line that gives \"user\" absolute power,
     or you need to replace \"user\" with the new user name. 
     "
-read ans
-while true; do
+    read ans
     case $ans in
       [Yy]*) visudo ; break ;;
       [Nn]*) break ;;
