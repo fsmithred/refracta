@@ -39,15 +39,17 @@ fi
 grub_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z]"  -printf 'FALSE\0%p\0' |
 xargs -0 zenity --list --checklist --multiple --column ' ' --column 'Hard Drives')
 
-# This test needs to be fixed, so that you can cancel the box
-# without exiting the script.
-if ! [[ -b $grub_dev ]] ; then
+if [[ -z $grub_dev ]] ; then
+    echo "No bootloader will be installed. Are you sure you want this?"
+    sleep 2 
+elif ! [[ -b $grub_dev ]] ; then
     echo "Something is wrong. Maybe you checked
     more than one box. If this were a real install,
     this script would not let you proceed."
     sleep 3
-else
+elif [[ -b $grub_dev ]] ; then
     echo "GRUB bootloader will be installed on $grub_dev"
+    sleep 2
 fi
 
 sleep 2
