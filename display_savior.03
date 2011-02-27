@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# refracta_display_savior.02
+# refracta_display_savior.03
 # Copyright 2011 fsmithred@gmail.com
 # Licence: GPL-3
 # This is free software, with NO WARRANTY. Use at your own risk!
@@ -25,8 +25,16 @@ xorg_conf="/etc/X11/xorg.conf"
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
-
+# This text needs some work, depending on who will be reading it and
+# under what circumstances. Will this script run automaticall if the
+# xserver won't start? 
 echo "
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+WARNING: If you proceed, this script will stop your desktop. You must
+run it from a console as root or with sudo. To get out now, hit ctrl-c,
+then ctrl-alt-F1, then login and run the script.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 If you're reading this, then it probably means that the graphical
 display is not working. If you know how to manually edit xorg.conf and
 save yourself in such a dilemma, then just ctrl-c your ass out of here,
@@ -44,9 +52,30 @@ lspci | grep VGA
 read -p "  Hit ENTER when you're ready to proceed."
 
 
-# Test if gdm is running; if so, stop it.
-if ps -C gdm; then
-  /etc/init.d/gdm stop
+# Test if xinit or a display manager is running; if so, stop it.
+if ps -C xinit; then
+  dm_status="no"
+  kill $(ps -C xinit -opid=)
+elif
+  ps -C gdm; then
+  dm_status="yes"
+  dm="gdm"
+elif
+  ps -C gdm3; then
+  dm_status="yes"
+  dm="gdm3"
+elif
+  ps -C kdm; then
+  dm_status="yes"
+  dm="kdm"
+elif
+  ps -C xdm; then
+  dm_status="yes"
+  dm="xdm"
+fi
+
+if [[ $dm_status = yes ]]; then
+  /etc/init.d/"$dm" stop
   sleep 3
 fi
 
@@ -120,8 +149,8 @@ sleep 1
 echo "  
   xorg.conf will contain the following values:
   
-  Display Driver			$driver
-  Screen Resolution			$resolution
+  Display Driver		$driver
+  Screen Resolution		$resolution
   Horizontal Sync Rate		$horiz
   Vertical Refresh Rate		$vert
   
@@ -202,7 +231,8 @@ done
 
 # Call the restore function
 while true; do
-  echo "  Would you like to restore a saved version of the
+  echo "
+  Would you like to restore a saved version of the
   display configuration file? (y or n)
   "
   read ans
@@ -222,7 +252,7 @@ while true; do
   
   a) disable kms - You will be rebooted.
   b) re-enable kms - You will be rebooted.
-  c) Skip this part. Don't change it. Don't reboot.
+  c) Skip this part. Don't change it. Don't reboot now.
   "
   read ans
   case $ans in
@@ -238,7 +268,32 @@ while true; do
   esac
 done
 
-# Start display manager if you skipped the reboot
-/etc/init.d/gdm start
+# If you skipped the reboot
+# start display manager or give a message to those who use startx.
+if [[ $dm_status = yes ]]; then
+  /etc/init.d/"$dm" start
+elif
+  [[ $dm_status = no ]]; then
+  echo "
+  Configuration is finished. Run startx and pray.
+  "
+else
+  while true; do
+    echo "
+  Configuration is finished, but this script does not know what display
+  manager you're using, if any. If you know how to restart your desktop,
+  then exit and do whatever you need to do. If you don't know what any
+  of this means, then reboot.
+
+  e) Exit this script and give me back the command prompt.
+  r) Reboot now.
+  "
+    read ans
+    case $ans in
+      [Ee]*) exit 0 ;;
+      [Rr]*) reboot ; break ;; 
+    esac
+  done
+fi
 
 exit 0
