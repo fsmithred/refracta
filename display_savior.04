@@ -1,0 +1,333 @@
+#!/usr/bin/env bash
+# refracta_display_savior.03
+# Copyright 2011 fsmithred@gmail.com
+# Licence: GPL-3
+# This is free software, with NO WARRANTY. Use at your own risk!
+
+# Synopsis
+# Stop gdm (need to make this work for gdm3, maybe kdm, xdm, slim?)
+# Ask user to choose display driver and resolution from lists,
+# and to input monitor frequencies if known.
+# Back up xorg.conf and replace it with the chosen values.
+# Offer to restore backed up xorg.conf
+# Add or remove "nomodeset" from kernel line, via /etc/default/grub.
+# Reboot or start display manager.
+#
+# TODO: 1. Test around line 126 should prevent removal of xorg.conf
+# if no new values were chosen, but it doesn't work.
+# 2. Add more choices.
+# 3. What else?
+
+
+# Change this if you just want to test.
+xorg_conf="/etc/X11/xorg.conf"
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
+
+# This text needs some work, depending on who will be reading it and
+# under what circumstances. Will this script run automaticall if the
+# xserver won't start? 
+echo "
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+WARNING: If you proceed, this script will stop your desktop. You must
+run it from a console as root or with sudo. To get out now, hit ctrl-c,
+then ctrl-alt-F1, then login and run the script.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+If you're reading this, then it probably means that the graphical
+display is not working. If you know how to manually edit xorg.conf and
+save yourself in such a dilemma, then just ctrl-c your ass out of here,
+and do what you have to do. However, if you're feeling lost, stick around
+and you'll be given some choices. Maybe we can get this thing running.
+
+First of all, you need to know what kind of video card you have. The
+next thing you see on screen will be the output of the lspci command,
+which will show you what video card you have. Look for words like \"ATI\"
+\"nVidia\" or \"Intel\" and make note of it.
+"
+
+lspci | grep VGA
+
+read -p "  Hit ENTER when you're ready to proceed."
+
+
+# Test if xinit or a display manager is running; if so, stop it.
+if ps -C xinit; then
+  dm_status="no"
+  kill $(ps -C xinit -opid=)
+elif
+  ps -C gdm; then
+  dm_status="yes"
+  dm="gdm"
+elif
+  ps -C gdm3; then
+  dm_status="yes"
+  dm="gdm3"
+elif
+  ps -C kdm; then
+  dm_status="yes"
+  dm="kdm"
+elif
+  ps -C xdm; then
+  dm_status="yes"
+  dm="xdm"
+fi
+
+if [[ $dm_status = yes ]]; then
+  /etc/init.d/"$dm" stop
+  sleep 3
+fi
+
+
+# Select display driver
+while true; do
+  echo "
+  Select a driver for your video card. (Enter the letter to choose.)
+
+  a) ati - for ATI cards (this one will choose the right driver)
+  b) radeon - for ATI cards
+  c) radeon-hd - for newer ATI cards
+  d) nv - for nVidia cards
+  e) nouveau - for nvidia cards (Some say this one is evil.)
+  f) intel - for Intel cards
+  g) vesa - failsafe for most cards
+  ENTER) Skip driver selection
+  "
+  read ans
+  case $ans in
+    a) driver="ati" ; break ;;
+    b) driver="radeon" ; break ;;
+    c) driver="radeon-hd" ; break ;;
+    d) driver="nv" ; break ;;
+    e) driver="nouveau" ; break ;;
+    f) driver="intel" ; break ;;
+    g) driver="vesa" ; break ;;
+    *) break ;;
+  esac
+done
+
+
+# Select display resolution
+choose_res () {
+while true; do
+  echo "
+  Select a display resolution. Choose the one you want as the default
+  resolution first. You will be asked if you want to add more.
+  
+  a) 640x480
+  b) 800x600  
+  c) 1024x768
+  d) 1152x864
+  e) 1280x1024
+  f) 1360x768
+  g) 1440x900
+  h) 1600x1024
+  i) 1600x1200
+  j) Enter a custom resolution
+    ENTER) Skip this selection.
+  "
+  read ans
+  case $ans in
+    a) resolution="${resolution[@]} \"640x480\" " ; break ;;
+    b) resolution="${resolution[@]} \"800x600\" " ; break ;;
+    c) resolution="${resolution[@]} \"1024x768\" " ; break ;;
+    d) resolution="${resolution[@]} \"1152x864\" " ; break ;;
+    e) resolution="${resolution[@]} \"1280x1024\" " ; break ;;
+    f) resolution="${resolution[@]} \"1360x768\" " ; break ;;
+    g) resolution="${resolution[@]} \"1440x900\" " ; break ;;
+    h) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
+    i) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
+    j) echo "Enter a custom resolution:  "
+         read custom_res
+         resolution="${resolution[@]} \"$custom_res\" " ; break ;;
+    *) break ;;
+  esac
+  
+done
+}
+choose_res
+
+
+while true; do
+  echo "${resolution[@]}
+  "
+  echo "Add another resolution?
+  (y or n)"
+  read ans
+  case $ans in
+    [Yy]*) choose_res ;;
+    [Nn]*) break ;;
+  esac
+done
+
+
+# Input monitor frequency ranges if known
+echo -n "
+  If you know your monitor's horizontal and vertical frequency ranges,
+  you can enter them here. Refer to the owner's manual or search the
+  web for specifications for your model of monitor to get these figures.
+  DO NOT GUESS!!!  If you don't know, leave them blank.
+  Improper settings can damage your monitor.
+  (Just hit ENTER to skip these questions.)
+  
+  Enter the horizontal frequency range. (e.g. 30 - 70): "
+read -e horiz
+  
+echo -n "
+  Enter the vertical frequency range. (e.g. 50 - 150):  "
+read -e vert
+  
+sleep 1
+  
+echo "  
+  xorg.conf will contain the following values:
+  
+  Display Driver		$driver
+  Screen Resolution		${resolution[@]}
+  Horizontal Sync Rate		$horiz
+  Vertical Refresh Rate		$vert
+  
+  "
+read -p "  Hit ENTER when you're ready to proceed."
+
+
+# If any values were chosen, back up and clear xorg.conf  
+if [[ -n $horiz ]] || [[ -n $vert ]] || [[ -n $driver ]] || [[ -n resolution ]]; then
+    if [[ -f $xorg_conf ]]; then
+      mv $xorg_conf $xorg_conf.$(date +%Y%m%d_%s)
+      touch $xorg_conf
+    fi
+fi
+
+### Add new values to xorg.conf
+
+# Monitor frequencies
+if [[ -n $horiz ]] && [[ -n $vert ]]; then
+  echo "
+  
+Section \"Monitor\"
+    Identifier     \"Monitor0\"
+    VendorName     \"Unknown\"
+    ModelName      \"Unknown\"
+    HorizSync       $horiz
+    VertRefresh     $vert
+EndSection
+
+"   >> $xorg_conf
+fi
+
+# Display driver
+if [[ -n $driver ]]; then
+  echo "
+
+Section            \"Device\"
+    Identifier     \"Device0\"
+    Driver         \"$driver\"
+EndSection
+
+"   >> $xorg_conf
+fi
+
+# Screen resolution
+if [[ -n ${resolution[@]} ]]; then
+echo "
+
+Section \"Screen\"
+    Identifier     \"Screen0\"
+    Device         \"Device0\"
+    Monitor        \"Monitor0\"
+    SubSection     \"Display\"
+        Modes       ${resolution[@]}
+    EndSubSection
+EndSection
+
+"   >> $xorg_conf
+fi
+
+
+# Function to restore a backed-up xorg.conf
+restore_config () {
+config_list=
+index=0
+for i in /etc/X11/xorg.conf* ; do
+  config_list[$index]="${i##*/}"
+  ((index++))
+done 
+PS3="  Choose a file to restore: "
+select choice in "${config_list[@]}"
+do
+echo "$choice"
+ cp /etc/X11/"$choice" /etc/X11/xorg.conf
+ break
+done
+}
+
+# Call the restore function
+while true; do
+  echo "
+  Would you like to restore a saved version of the
+  display configuration file? (y or n)
+  "
+  read ans
+  case $ans in
+    [Yy]*) restore_config ; break ;;
+        *) break ;;
+  esac
+done
+             
+
+# Edit /etc/default/grub to disable/enable kms and reboot
+while true; do
+  echo "
+  Some hardware doesn't work with kernel mode setting. If you want to
+  try disabling it, you can do it here. You can also re-enable it here,
+  in case disabling didn't help.
+  
+  a) disable kms - You will be rebooted.
+  b) re-enable kms - You will be rebooted.
+  c) Skip this part. Don't change it. Don't reboot now.
+  "
+  read ans
+  case $ans in
+    a) sed -i~ "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"nomodeset\"/" /etc/default/grub
+       update-grub
+       reboot
+       break ;;
+    b) sed -i~ 's/nomodeset//' /etc/default/grub
+       update-grub
+       reboot
+       break ;;
+    c) break ;;
+  esac
+done
+
+# If you skipped the reboot
+# start display manager or give a message to those who use startx.
+if [[ $dm_status = yes ]]; then
+  /etc/init.d/"$dm" start
+elif
+  [[ $dm_status = no ]]; then
+  echo "
+  Configuration is finished. Run startx and pray.
+  "
+else
+  while true; do
+    echo "
+  Configuration is finished, but this script does not know what display
+  manager you're using, if any. If you know how to restart your desktop,
+  then exit and do whatever you need to do. If you don't know what any
+  of this means, then reboot.
+
+  e) Exit this script and give me back the command prompt.
+  r) Reboot now.
+  "
+    read ans
+    case $ans in
+      [Ee]*) exit 0 ;;
+      [Rr]*) reboot ; break ;; 
+    esac
+  done
+fi
+
+exit 0
