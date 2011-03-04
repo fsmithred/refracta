@@ -17,12 +17,6 @@
 # NOTE2: If you try to tee this to an install log, you won't see it
 # when cryptsetup asks you to confirm with YES.
 
-# TODO
-# Review cleanup for encrypted partitions
-# OK: Cleanup excludes? - Added tests for "- /home/*" and "- /boot/*" in
-# case the script is run several times (so they don't get added every time.)
-# tune2fs for /boot? note: default is 5% ( -m 5 )
-# chroot /target_boot for grub-install?
 
 error_log="error_log.txt"
 exec 2>"$error_log"
@@ -113,7 +107,7 @@ while true; do
     esac
 done
 
-echo "one"
+echo "@one@"
 
 # Leave these variables blank. You will be asked to provide values.
 grub_dev=
@@ -121,42 +115,41 @@ boot_dev=
 fs_type_boot=
 install_dev=
 fs_type_os=
-encrypt_os=
 home_dev=
 fs_type_home=
-encrypt_home=
+
 
 # Select location for bootloader; if null, ask to verify or enter.
 # If location is entered but does not exist, then exit with error.
 
-    echo -n "
+echo -n "
 
  Where would you like the GRUB bootloader to be installed?
  (probably a drive, like /dev/sda): "
-    read grub_dev
-    if [[ -z $grub_dev ]] ; then
-        while true; do
-            echo "
+read grub_dev
+if [[ -z $grub_dev ]] ; then
+    while true; do
+        echo "
  No device was selected for a bootloader. Are you sure you want this?
  (yes or no)
  "
-            read ans
-            case $ans in
-              [Yy]*) break ;;
-              [Nn]*) echo "
+        read ans
+        case $ans in
+          [Yy]*) break ;;
+          [Nn]*) echo "
  Enter a device for the bootloader
  "
-                   read grub_dev
-                   break ;;
-            esac
-        done
-    fi
+               read grub_dev
+               break ;;
+        esac
+    done
+fi
 
-echo "two"
+echo "@two@"
 if [[ -n $grub_dev ]] ; then
     [[ -b $grub_dev ]] || { echo "$grub_dev does not exist!" ; exit 1 ; }
 fi
-echo "three"
+echo "@three@"
 
 # Enter device for /boot partition or skip. If one is entered, test it.
 echo -n "
@@ -167,7 +160,7 @@ echo -n "
  (give the full device name, like /dev/sda1): "
  
 read boot_dev
-echo "four"
+echo "@four@"
 echo "$boot_dev"
 if ! [[ -z $boot_dev ]] && ! [[ -b $boot_dev ]] ; then
     echo " $boot_dev does not exist!
@@ -179,7 +172,7 @@ if ! [[ -z $boot_dev ]] && ! [[ -b $boot_dev ]] ; then
     echo "Press ENTER when you're ready to continue"
     read -p " "
 fi
-echo "five"
+echo "@five@"
 # Choose filesystem type for /boot if it exists.
 if [[ -n $boot_dev ]] ; then
     while true; do
@@ -228,7 +221,7 @@ while true; do
       4) fs_type_os="ext4" ; break ;;
     esac
 done
-echo "six"
+echo "@six@"
 # Decide if OS should be encrypted
 while true; do
     echo -n "
@@ -285,10 +278,9 @@ if [[ -n $home_dev ]] ; then
         esac
     done
 fi
-echo "seven"
+echo "@seven@"
 # Decide if /home should be encrypted
 if [[ -n $home_dev ]] ; then
-    echo "eight"
     while true; do
         echo -n "
         
@@ -302,10 +294,11 @@ if [[ -n $home_dev ]] ; then
     esac
     done
 fi
- 
+echo "@eight@"
 
-# just in case, cleanup first
-echo -e "\n Preparing for installation...\n"
+# Unmount or close anything that might need unmounting or closing
+cleanup () {
+echo -e "\n Cleaning up...\n"
 if $(df | grep -q /target/proc/) ; then
     umount /target/proc/
 fi
@@ -349,7 +342,7 @@ fi
 if $(df | grep -q $boot_dev) ; then
     umount -l $boot_dev
 fi
-
+# These next ones might be unnecessary
 if [[ -d /target ]] ; then
     rm -rf /target
 fi
@@ -361,17 +354,20 @@ fi
 if [[ -d /target_boot ]] ; then
     rm -rf /target_boot
 fi
+}
+
+cleanup
 
 # make mount point, format, adjust reserve and mount
+# install_dev must maintain the device name for cryptsetup
+# install_part will be either device name or /dev/mapper name as needed.
 echo -e "\n Creating filesystem on $install_dev...\n"
 mkdir /target ;  check_exit
 if [[ $encrypt_os = yes ]] ; then
     echo " You will need to create a passphrase."
-    cryptsetup luksFormat "$install_dev"
-    check_exit
+    cryptsetup luksFormat "$install_dev" ; check_exit
     echo "Encrypted partition created. Opening it..."
-    cryptsetup luksOpen "$install_dev" root-fs
-    check_exit
+    cryptsetup luksOpen "$install_dev" root-fs ; check_exit
     install_part="/dev/mapper/root-fs"
 else
     install_part="$install_dev"
@@ -381,12 +377,17 @@ tune2fs -r 10000 "$install_part" ; check_exit
 mount "$install_part" /target ; check_exit 
 
 # make mount point for separate home if needed
-# and add /home/* to the excludes list
+# and add /home/* to the excludes list if it's not already there
 if [[ -n $home_dev ]] ; then
-    echo "Creating filesystem on $home_dev..."
+    echo "
+    
+ Creating filesystem on $home_dev...
+    "
     mkdir /target_home ; check_exit
     if [[ $encrypt_home = yes ]]; then
-        echo " You will need to create a passphrase."
+        echo "
+ You will need to create a passphrase.
+ "
         cryptsetup luksFormat "$home_dev"
         check_exit
         echo "Encrypted partition created. Opening it..."
@@ -405,8 +406,8 @@ fi
 fi
 
 # make mount point for separate /boot if needed
-# and add /boot/* to the excludes list
-# allow default for reserved blocks
+# and add /boot/* to the excludes list if it's not already there
+# allow default for reserved blocks (don't need tune2fs here)
 if [[ -n $boot_dev ]] ; then
     mkdir /target_boot ; check_exit
     mke2fs -t $fs_type_boot $boot_dev ; check_exit
@@ -469,7 +470,7 @@ if [[ -n $boot_dev ]] ; then
     check_exit
 fi
 
-# Setup /etc/crypttab if needed
+# Add entry for root filesystem to crypttab if needed
 if [[ $encrypt_os = yes ]] ; then
     echo -e "\n Adding $install_part entry to crypttab...\n"
     echo -e "root-fs\t\t$install_dev\t\tnone\t\tluks" >> /target/etc/crypttab
@@ -489,48 +490,25 @@ mount -t proc --bind /proc/ /target/proc/ ; check_exit
 mount -t sysfs --bind /sys/ /target/sys/ ; check_exit 
 
 
-# setup grub
+# Setup GRUB 
 echo -e "\n Installing the boot loader...\n"
+
+# If /boot is separate partition, need to mount it in chroot for grub
 if [[ -n $boot_dev ]] ; then
     chroot /target mount $boot_dev /boot
-    chroot /target grub-install $grub_dev
-    if [[ $encrypt_os = yes ]] ; then
-        chroot /target update-initramfs -u
-    fi
-else
-    chroot /target grub-install $grub_dev ; check_exit
 fi
-echo "ten"
+
+chroot /target grub-install $grub_dev ; check_exit
+echo "@ten@"
+# Run update-initramfs to include dm-mod if using encryption
+if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
+    chroot /target update-initramfs -u
+fi
+
 chroot /target update-grub ; check_exit
-echo "eleven"
-###chroot /target_boot update-grub ; check_exit
+echo "@eleven@"
 
-# cleanup
-echo -e "\n Cleaning up...\n"
-umount /target/proc/ ; check_exit 
-umount /target/dev/ ; check_exit 
-umount /target/sys/ ; check_exit 
-umount -l /target ; check_exit
-if $(df | grep -q $home_part) ; then
-    umount $home_part ; check_exit
-    if [[ $encrypt_home = yes ]] ; then
-        cryptsetup luksClose "$home_part" ; check_exit
-    fi
-fi 
-
-if [[ -d /target_boot ]] ; then
-    umount /target_boot
-    check_exit
-fi
-
-if $(df | grep -q $install_part) ; then
-    umount $install_part
-    check_exit
-    if [[ $encrypt_os = yes ]] ; then
-        cryptsetup luksClose "$install_part" ; check_exit
-    fi
-fi
-# this shouldn't matter - we're running a live-cd
-rm -rf /target ; check_exit 
+# call cleanup function
+cleanup
 
 echo -e "\n\t Done!\n\n You may now reboot into the new system.\n\n"
