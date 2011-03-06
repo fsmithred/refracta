@@ -31,7 +31,7 @@
 error_log="z-error_log.txt"
 exec 2>"$error_log"
 
-rsync_excludes="/home/user/exclude.list"
+rsync_excludes="./exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -446,6 +446,7 @@ fi
 
 cleanup
 
+
 # make mount point, format, adjust reserve and mount
 # install_dev must maintain the device name for cryptsetup
 # install_part will be either device name or /dev/mapper name as needed.
@@ -463,6 +464,7 @@ fi
 mke2fs -t $fs_type_os "$install_part" ; check_exit 
 tune2fs -r 10000 "$install_part" ; check_exit 
 mount "$install_part" /target ; check_exit 
+
 
 # make mount point for separate home if needed
 # and add /home/* to the excludes list if it's not already there
@@ -493,6 +495,7 @@ fi
     fi
 fi
 
+
 # make mount point for separate /boot if needed
 # and add /boot/* to the excludes list if it's not already there
 # allow default for reserved blocks (don't need tune2fs here)
@@ -503,6 +506,17 @@ if [[ -n $boot_dev ]] ; then
     if ! $(grep -q "\/boot\/\*" "$rsync_excludes"); then
         echo "- /boot/*" >> "$rsync_excludes"
     fi
+fi
+
+
+# make sure there's not a leftover entry in excludes list for /home/*
+# or /boot/* from a previous run if not needed this time.
+if [[ -z $boot_dev ]] ; then
+    sed -i 's:- /boot/\*::' "$rsync_excludes"
+fi
+
+if [[ -z $home_dev ]] ; then
+    sed -i 's:- /home/\*::' "$rsync_excludes"
 fi
 
 
