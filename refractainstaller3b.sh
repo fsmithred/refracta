@@ -542,6 +542,17 @@ if [[ -n $boot_dev ]] ; then
 fi
 
 
+# make sure there's not a leftover entry in excludes list for /home/*
+# or /boot/* from a previous run if not needed this time.
+if [[ -z $boot_dev ]] ; then
+    sed -i 's:- /boot/\*::' "$rsync_excludes"
+fi
+
+if [[ -z $home_dev ]] ; then
+    sed -i 's:- /home/\*::' "$rsync_excludes"
+fi
+
+
 # copy everything over except the things listed in the exclude list
 echo -e "\n Copying system to new partition...\n"
 rsync -a / /target/ --exclude-from="$rsync_excludes" ; check_exit 
