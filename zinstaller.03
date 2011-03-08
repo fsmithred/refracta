@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# zinstaller.02
+# zinstaller.03
 # Copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 # This is free software with NO WARRANTY. Use at your own risk!
@@ -31,7 +31,7 @@
 error_log="z-error_log.txt"
 exec 2>"$error_log"
 
-rsync_excludes="./exclude.list"
+rsync_excludes="/home/user/exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -119,7 +119,7 @@ choose_grub
 
 # Show the partition list in a menu, and choose one for /boot
 choose_boot () {
-boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]"  -printf 'FALSE\0%p\0' | \
+boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" | sort | awk '{ printf "FALSE""\0"$0"\0" }' | \
 xargs -0 zenity --list --title="/boot partition" --text="If you would like a separate /boot partition, select 
 one now and click \"OK\". Otherwise, just click \"OK\" 
 If you're planning to encrypt the operating system, 
@@ -171,7 +171,7 @@ fi
 echo "two"
 # Show the partition list in a menu, and choose one for the OS
 choose_root () {
-install_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]"  -printf 'FALSE\0%p\0' | \
+install_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]"  | sort | awk '{ printf "FALSE""\0"$0"\0" }' | \
 xargs -0 zenity --list --title="Root Partition" --text="Choose a partition to use for the installation of the operating system." \
 --radiolist --multiple --column ' ' --column 'Partitions')
 
@@ -260,7 +260,7 @@ fi
 
 # Show the partition list in a menu, and choose one for /home
 choose_home () {
-home_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]"  -printf 'FALSE\0%p\0' | \
+home_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]"  | sort | awk '{ printf "FALSE""\0"$0"\0" }' | \
 xargs -0 zenity --list --title="/home partition" --text="If you would like a separate /home partition, select 
 one now and click \"OK\". Otherwise, just click \"OK\"" \
 --radiolist --multiple --column ' ' --column 'Partitions')
