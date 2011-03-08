@@ -31,7 +31,7 @@
 error_log="z-error_log.txt"
 exec 2>"$error_log"
 
-rsync_excludes="/home/user/exclude.list"
+rsync_excludes="./exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
