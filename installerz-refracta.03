@@ -129,12 +129,12 @@ echo "@@@ three @@@"
 
 # Check that rsync excludes file exists, or create one.
 if [[ $install = "expert" ]]; then
+# Check that rsync excludes file exists, or create one.
     if ! [[ -f  $rsync_excludes ]] ; then
         zenity --question --ok-label=Continue --cancel-label=Exit \
-    ###### FIX THIS TEXT
-         --text="There is no rsync excludes file, or its name does not match what this script expects. You can let the script create one, or if you have a custom exlcudes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
+        --text="There is no rsync excludes file, or its name does not match what this script expects. You should let the script create one, or if you have a custom exlcudes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
     
-If you have any external or internal drives mounted now, they will not be copied. If you want to change that behavior, remove the -x from the rsync commands. Make sure you have enough space on the target partitions for the install."
+*** IMPORTANT! If you have any external or internal drives mounted now, you should probably unmount them, or they will be copied. If that's what you really want, make sure you have enough space on the target partitions for the install."
         if [[ $? = 0 ]] ; then
             copy_excludes
         else
