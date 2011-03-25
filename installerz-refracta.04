@@ -838,14 +838,17 @@ echo "@ten@"
 
 # BEGIN SPLICE FROM mkunlive.sh
 
+
+# Need to mount the target home partition under the target root partition
+# so the commands can find it (for changing user configs gksu)
+if [[ $sep_home = "yes" ]]; then
+    mount $home_part /target/home
+fi
 echo "@@@ eleven @@@"
 
 # Change the username
-# Need to mount the target home partition under the target root partition
-# so the commands can find it.
 if [[ $change_user = "yes" ]]; then
 	oldname=$(awk -F: '/1000:1000/ { print $1 }' /target/etc/passwd)
-	mount $home_part /target/home
 	newname=$(zenity --entry --title="Change user name" --text="The primary user's current login name is $oldname. 
 Enter the new login name you want to use.")
 
@@ -855,7 +858,7 @@ Enter the new login name you want to use.")
 	chroot /target groupmod -n $newname $oldname ; check_exit
 	chroot /target usermod -d /home/$newname -m $newname ; check_exit
 
-	for i in $(grep -r "/home/$oldname" /target_home/$newname/.config | awk -F":" ' { print $1 }'); do
+	for i in $(grep -r "/home/$oldname" /target/home/$newname/.config | awk -F":" ' { print $1 }'); do
 		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i" ; check_exit
 	done
 fi
