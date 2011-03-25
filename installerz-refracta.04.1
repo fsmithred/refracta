@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# installerz-refracta.04
+# installerz-refracta.04.1
 # Copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 # This is free software with NO WARRANTY. Use at your own risk!
@@ -880,10 +880,22 @@ if [[ $install = "expert" ]]; then
      --text="You should edit /etc/sudoers to comment out the last line, which gives \"user\" absolute power, or replace \"user\" with the new user name. A simple text-editor will open in the terminal if you do this now.
  
 Edit /etc/sudoers now?"
+    if [[ $? = 0 ]]; then
+        edit_sudoers="yes"
+        chroot /target visudo
+    fi
+fi
+
+
+# Disable sudo-mode for gksu
+if [[ $edit_sudoers = "yes" ]]; then
+    zenity --question --title="Disable sudo mode for gksu" --ok-label="Yes, I commented out the line." --cancel-label="No, I replaced \"user\" with the new username." \
+     --text="If you commented out the last line in /etc/sudoers in the last step, one more file will be changed for you so that gksu will work properly."
         if [[ $? = 0 ]]; then
-            chroot /target visudo
+            sed -i~ '/sudo-mode/s/true/false/' /target/home/"$newname"/.gconf/apps/gksu/%gconf.xml
         fi
 fi
+
 
 echo "@@@ fourteen @@@"
 # Change/create root password
