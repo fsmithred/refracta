@@ -698,7 +698,7 @@ echo -e "\n Copying update-initramfs...\n"
 if [[ -f /target/usr/sbin/update-initramfs.distrib ]] ; then
     cp /target/usr/sbin/update-initramfs.distrib /target/usr/sbin/update-initramfs
 fi
-if [[ /target/usr/sbin/update-initramfs.debian ]] ; then
+if [[ -f /target/usr/sbin/update-initramfs.debian ]] ; then
     cp /target/usr/sbin/update-initramfs.debian /target/usr/sbin/update-initramfs
 fi
 
