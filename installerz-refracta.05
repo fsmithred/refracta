@@ -50,7 +50,7 @@
 # Change username and passwords, edit /etc/sudoers *
 
 
-error_log="install_errors.log"
+error_log="/var/log/refracta_install_errors.log"
 exec 2>"$error_log"
 
 # Experts can change this to a custom file
@@ -68,6 +68,7 @@ See $error_log for details." &
 }
 
 
+# function to create the excludes file for rsync
 copy_excludes () {
         cat > "$rsync_excludes" <<EOF
 - /dev/*
