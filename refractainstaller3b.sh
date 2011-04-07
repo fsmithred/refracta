@@ -21,7 +21,7 @@
 error_log="error_log.txt"
 exec 2>"$error_log"
 
-rsync_excludes="/home/user/exclude.list"
+rsync_excludes="./exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -194,6 +194,8 @@ if [[ -n $boot_dev ]] ; then
     done
 fi
 
+
+# Choose partition for root filesystem
 echo -n "
 
  Which partition would you like to use for the installation
@@ -222,6 +224,7 @@ while true; do
     esac
 done
 echo "@six@"
+
 # Decide if OS should be encrypted
 while true; do
     echo -n "
@@ -231,12 +234,56 @@ while true; do
  "
     read ans
     case $ans in
-      [Yy]*) encrypt_os="yes" ; break ;;
+      [Yy]*) encrypt_os="yes"
+             # test for cryptsetup
+             if ! [[ -f /sbin/cryptsetup ]]; then
+                 while true; do
+                     echo " Cryptsetup is not installed. You need to
+ install it and run the command, 'sudo modprobe dm-mod'
+ before you can use encryption.Do you want to proceed
+ without encrypting the partition?
+ (y or n)
+ 
+      Yes) Proceed without encrypting the partition
+       No) Exit
+       "
+                    read ans
+                    case $ans in
+                      [Yy]*) break 2 ;;
+                      [Nn]*) exit 1 ;;
+                    esac
+                done
+             fi
+             # end test for cryptsetup
+             #
+             # test to make sure there's a separate /boot partition
+             if [[ -z $boot_dev ]] ; then
+                 while true; do
+                     echo " You MUST have a separate, unencrypted /boot partition
+ if you intend to boot an encrypted operating system.
+ You can proceed without encrypting the root filesystem,
+ or you can exit and start over.Do you want to proceed
+ without encrypting the partition?
+ (y or n)
+ 
+      Yes) Proceed without encrypting the partition
+       No) Exit
+       "
+                    read ans
+                    case $ans in
+                      [Yy]*) break ;;
+                      [Nn]*) exit 1 ;;
+                    esac
+                done
+            fi
+            # end test for separate /boot partition
+            break ;;
       [Nn]*) encrypt_os="no"  ; break ;;
     esac
 done
 
 
+# Enter device for /home partition or skip. If one is entered, test it.
 echo -n "
 
   If you created a separate partition for /home, 
@@ -289,12 +336,89 @@ if [[ -n $home_dev ]] ; then
  "
     read ans
     case $ans in
-      [Yy]*) encrypt_home="yes" ; break ;;
+      [Yy]*) encrypt_home="yes"
+             # test for cryptsetup
+             if ! [[ -f /sbin/cryptsetup ]]; then
+                 while true; do
+                     echo " Cryptsetup is not installed. You need to
+ install it and run the command, 'sudo modprobe dm-mod'
+ before you can use encryption. Do you want to proceed
+ without encrypting the partition?
+ (y or n)
+ 
+      Yes) Proceed without encrypting the partition
+       No) Exit
+       "
+                    read ans
+                    case $ans in
+                      [Yy]*) break ;;
+                      [Nn]*) exit 1 ;;
+                    esac
+                done
+             fi
+             # end test for cryptsetup
+             break ;;
       [Nn]*) encrypt_home="no"  ; break ;;
     esac
     done
 fi
 echo "@eight@"
+
+
+# Show a summary of what will be done
+if [[ -z $grub_dev ]] ; then
+    grub_dev_message="--> Bootloader will not be installed."
+else
+    grub_dev_message="--> Bootloader will be installed in $grub_dev"
+fi
+
+if [[ $encrypt_os = yes ]] ; then
+    os_enc_message=", and will be encrypted."
+fi
+
+if [[ -z $home_dev ]] ; then
+    home_dev_message="--> /home will not be on a separate partition."
+else
+    home_dev_message="--> /home will be installed on $home_dev and formatted as $fs_type_home"
+fi
+
+if [[ -n $home_dev ]] && [[ $encrypt_home = yes ]] ; then
+    home_enc_message=", and will be encrypted."
+fi
+
+if [[ -n $boot_dev ]] ; then
+    boot_dev_message="--> /boot will be installed on $boot_dev and formatted as $fs_type_boot."
+fi
+
+#if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
+#    proceed_message="***  IF YOU PROCEED, YOU WILL NEED TO RESPOND TO SOME QUESTIONS IN THE TERMINAL.   Be prepared to create passphrases for any encrypted partitions (several times each.) When you see the progress bar come up, you can take a break."
+#fi
+
+while true; do
+    echo "  
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+                SUMMARY OF WHAT WILL BE DONE
+    
+ $grub_dev_message
+ --> Operating system will be installed on $install_dev
+     and formatted as $fs_type_os$os_enc_message
+ $home_dev_message$home_enc_message
+ $boot_dev_message
+    
+ WARNING: This is your last chance to exit before any changes are made.
+ 
+ Proceed with the installation?  (yes or no)
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ "
+    read ans
+    case $ans in
+      [Yy]*) break ;;
+      [Nn]*) exit 0 ;;
+    esac
+done
+
+# Actual installation begins here
 
 # Unmount or close anything that might need unmounting or closing
 cleanup () {
@@ -415,6 +539,17 @@ if [[ -n $boot_dev ]] ; then
     if ! $(grep -q "\/boot\/\*" "$rsync_excludes"); then
         echo "- /boot/*" >> "$rsync_excludes"
     fi
+fi
+
+
+# make sure there's not a leftover entry in excludes list for /home/*
+# or /boot/* from a previous run if not needed this time.
+if [[ -z $boot_dev ]] ; then
+    sed -i 's:- /boot/\*::' "$rsync_excludes"
+fi
+
+if [[ -z $home_dev ]] ; then
+    sed -i 's:- /home/\*::' "$rsync_excludes"
 fi
 
 

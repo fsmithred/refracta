@@ -1,160 +1,106 @@
 #!/usr/bin/env bash
-# refracta extra package selection and installation tool version 0.2
-# Copyright 2011 fsmithred@gmail.com
-# License: GPL-3  This is free software with no warranties, express 
-# or implied. Use at your own risk. 
-#
-# SYNOPSIS:
-# Check that user is root. Ask to run update, ask to run full-upgrade.
-# The make_selections function presents the user with a menu of choices
-# for single packages and package lists that can be installed. The user 
-# can get more information about a package or list by choosing it from
-# the menu. 
-# The ask_install function gives the user the option to add the packages
-# to the installation list, return to the menu without adding those
-# packages, or exiting the script.
-# The install_selections function will install all packages in the 
-# install_list array.
+# repsit v.5
+# copyright 2011 fsmithred@gmail.com
+# License: GPL-3
 
-#### NOTE: This is a test version. The update and upgrade are real, but 
-#### package installation is simulated. Edit line 72 to change that.
 
 # define some package lists.
-# single packages can be added to the menu without being defined here.
+# If you add a package list here, you must also add it to the
+# zenity list around line 50 and to the if/then list below that.
+# Note that a list can contain one or more packages. 
+Synaptic=(synaptic)
 dvd_set=(libdvdcss2 libdvdnav4 libdvdread4)
-file_share=(samba smbfs smbclient)
+flash_vid=(flashplugin-nonfree sun-java6-plugin)
+file_share_win=(samba smbfs smbclient)
+file_share_lin=(nfs-kernel-server nfs-common)
 graphics=(gimp blender inkscape)
-
+module_comp=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
+kernel_comp=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
+nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
+mousepad=(mousepad)
 
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
 
 
-# Ask to run upgrade.
-ask_upgrade () {
-while true; do
-    printf "\n  If any packages were listed for installation in the last
-  step, you should upgrade them now by answering \"yes\".
-    
-  Install security updates? "
-    read ans
-    case $ans in
-      [Yy]*) aptitude full-upgrade ; break 2 ;;
-      [Nn]*) break 2 ;;
-    esac
-done
-}
+zenity --question  --ok-label=OK --cancel-label="Skip update" \
+  --text="Before installing new software, the system should be updated. If you haven't done this recently (i.e. in the last 24 hours) you should click OK to proceed. 
+  
+Click OK to proceed, or Cancel to skip the update." 
 
-# Ask to run update.
-while true; do
-    printf "  The package list needs to be updated before installing
-  anything. If it's been awhile since you've done that, you should
-  answer \"y\" to do it now. After the list is updated, aptitude will
-  show you what packages are scheduled for security updates. This will
-  be a simulated run, so answering yes or no will just return you to
-  this script. 
-    
-  Update package list? "
-    read ans
-    case $ans in
-      [Yy]*) aptitude update
-             aptitude -s full-upgrade
-             read -p "  Press the ENTER key when you're ready to proceed."
-             sleep 1
-             ask_upgrade ;;
-      [Nn]*) break ;;
-    esac
-done
-
-# Set a prompt for the menu.
-PS3="Choice by NUMBER: "
-
-# Don't quote the array here, or aptitude will puke.
-install_selections () {
-	echo "---"
-	aptitude -s install ${install_list[@]}
-	exit 0
-}
-
-
-# Answer "y" will add selections from menu to the install list, and
-# then return to the menu. Answer "n" will just return to the menu.
-# "e" will exit the script.
-# Note:
-# echo the array instead of printf, unless someone else can figure out
-# how to get printf to echo the entire list, instead of just the first
-# choice.
-ask_install () {
-	while true; do
-		printf "\n\t Add these packages to the install list?\n
-         y)   add packages and return to selection menu
-         n)   don't add anything, but return to the selection menu
-      "
-	    read ans
-	    case $ans in
-	      [Yy]*)  install_list=( "${install_list[@]}" "${selection[@]}" )
-	              printf "\t The following packages are marked for installation.\n"
-                  echo "${install_list[@]}"
-                  printf "\n"
-	              make_selections ;;
-	      [Nn]*)  make_selections ;;
-	      esac
-	done
-}
-
-
-# To add more packages or package lists here, do two things:
-# 1. add the package name or list name to the Options line.
-# 2. add an elif block for the package or list.
-# Note the different syntax on the export line for single packages
-# vs. package lists.
-make_selections () {
-	echo "
-  Select package groups by the number to get more information about them.
-  You will be asked if you want to add them to the installation list or not.
-  When you're ready to install the packages, select \"install\".
-  If you want to exit this script without installing anything, select
-  \"exit\".\n\n"
-	
-Options="dvd_set file_share graphics mousepad roxterm install exit"
-select opt in $Options; do
-    if [[ "$opt" = "dvd_set" ]]; then
-        selection="${dvd_set[@]}"
-        printf "\n\t This set contains packages necessary 
-         for watching DVD movies.
-         Packages: ${selection[@]}\n"
-        ask_install
-    elif [[ "$opt" = "file_share" ]]; then
-        selection="${file_share[@]}"
-        printf "\n\t This set contains packages for sharing files
-         with computers running MS Windows.
-         Packages: ${selection[@]}\n"
-        ask_install
-    elif [[ "$opt" = "graphics" ]]; then
-        selection="${graphics[@]}"
-        printf "\n\t This set contains packages for creating and
-         editing images and movies.
-         Packages: ${selection[@]}\n"
-        ask_install
-    elif [[ "$opt" = "mousepad" ]]; then
-        selection=(mousepad)
-        printf "\n\t Mousepad is a simple Xfce oriented text editor.
-         Packages: ${selection[@]}\n"
-        ask_install
-    elif [[ "$opt" = "roxterm" ]]; then
-        selection=(roxterm)
-        printf "\n\t roxterm is a multi-tabbed GTK/VTE terminal emulator.
-         Packages: ${selection[@]}\n"
-        ask_install
-    elif [[ "$opt" = "install" ]]; then
-        install_selections
-    elif [[ "$opt" = "exit" ]]; then
-        printf "\t Exiting... \n"
-        exit 0
+if [[ $? = 0 ]] ; then
+    if [[ $(type -p update-manager) ]] ; then
+        update-manager
+    else
+        zenity --question  --ok-label=Yes --cancel-label=No --text="Update Manager is not installed. If you don't install it, you need to run the updates manually. In either case, you'll need to run this installer again.
+        
+Install update-manager-gnome now?"
+        if [[ $? = 0 ]] ; then
+            aptitude -y install update-manager-gnome | tee >(zenity --progress --pulsate)
+            exit 0
+        else
+            exit 0
+        fi
     fi
-done
-}
+fi
+
+ans=$(zenity --list --title="Installation Menu" --text "Choose package groups to install" --checklist \
+  --ok-label=OK --cancel-label=Exit --width=520 --height=320  \
+  --column "Pick" --column "Package Group" --column "Description" \
+  FALSE Synaptic "full-featured graphical package manager" \
+  FALSE dvd_set "software to watch dvd movies" \
+  FALSE flash_vid "install Adobe flash and Sun Java browser plugins" \
+  FALSE file_share_win "share files with windows computers (smb)" \
+  FALSE file_share_lin "share files with linux computers (nfs)" \
+  FALSE graphics "programs for editing pictures and movies" \
+  FALSE nvidia_driver "proprietary nvidia graphics driver" \
+  FALSE module_comp "gcc, make, headers, module-assistant" \
+  FALSE kernel_comp "programs needed for compiling the linux kernel" )
+echo "$ans"
 
 
+# this needs to be here in case the list is cancelled or ok'd with no selections.
+if [[ -z $ans ]]; then
+    exit 0
+fi
 
-make_selections
+# Put all selected package lists into an install list.
+if $(echo $ans | grep -q Synaptic) ; then
+    install_list=("${install_list[@]}"  "${Synaptic[@]}")
+fi
+if $(echo $ans | grep -q dvd_set) ; then
+    install_list=("${install_list[@]}"  "${dvd_set[@]}")
+fi
+if $(echo $ans | grep -q flash_vid) ; then
+    install_list=("${install_list[@]}"  "${flash_vid[@]}")
+fi
+if $(echo $ans | grep -q file_share_win) ; then
+    install_list=("${install_list[@]}"  "${file_share_win[@]}")
+fi
+if $(echo $ans | grep -q file_share_lin) ; then
+    install_list=("${install_list[@]}"  "${file_share_lin[@]}")
+fi
+if $(echo $ans | grep -q graphics) ; then
+    install_list=("${install_list[@]}"  "${graphics[@]}")
+fi
+if $(echo $ans | grep -q module_comp) ; then
+    install_list=("${install_list[@]}"  "${module_comp[@]}")
+fi
+if $(echo $ans | grep -q kernel_comp) ; then
+    install_list=("${install_list[@]}"  "${kernel_comp[@]}")
+fi
+if $(echo $ans | grep -q nvidia_driver) ; then
+    install_list=("${install_list[@]}"  "${nvidia_driver[@]}")
+fi
+
+echo "${install_list[@]}"
+
+zenity --question --text="$(aptitude -s install ${install_list[@]} &)"
+if [[ $? = 0 ]] ; then
+    aptitude -y install ${install_list[@]}  | tee >(zenity --progress --pulsate)
+else
+    echo "You said no."
+    exit 0
+fi
+
+exit 0

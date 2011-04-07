@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mkunlive.sh  (Refracta Aunt Martha version)
+# change-username.sh  (Refracta xfce/icewm version)
 # Change user name from user to something else, for a live-build system
 # that was installed with refractainstaller.
 # Run once as user from $HOME with no arguments
@@ -319,6 +319,21 @@ while true; do
       [Nn]*) break ;;
     esac
 done
+
+
+# Disable sudo-mode for gksu
+if [[ $edit_sudoers = "yes" ]]; then
+    zenity --question --title="Disable sudo mode for gksu" --ok-label="Yes, I commented out the line." --cancel-label="No, I replaced \"user\" with the new username." \
+     --text="If you commented out the last line in /etc/sudoers in the last step, one more file will be changed for you so that gksu will work properly."
+        if [[ $? = 0 ]]; then
+            if [[ -n $newname ]]; then
+                sed -i~ '/sudo-mode/s/true/false/' /target/home/"$newname"/.gconf/apps/gksu/%gconf.xml
+            else
+                sed -i~ '/sudo-mode/s/true/false/' /target/home/user/.gconf/apps/gksu/%gconf.xml
+            fi
+        fi
+fi
+
 
 echo "
     Done!
