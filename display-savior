@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# refracta_display_savior.03
+
+# refracta_display_savior.05
 # Copyright 2011 fsmithred@gmail.com
 # Licence: GPL-3
 # This is free software, with NO WARRANTY. Use at your own risk!
 
 # Synopsis
-# Stop gdm (need to make this work for gdm3, maybe kdm, xdm, slim?)
+# Stop the display manager (works for gdm, gdm3, kdm, xdm)
 # Ask user to choose display driver and resolution from lists,
 # and to input monitor frequencies if known.
 # Back up xorg.conf and replace it with the chosen values.
@@ -13,8 +14,8 @@
 # Add or remove "nomodeset" from kernel line, via /etc/default/grub.
 # Reboot or start display manager.
 #
-# TODO: 1. Test around line 126 should prevent removal of xorg.conf
-# if no new values were chosen, but it doesn't work.
+# TODO: 1. Test around line 200 should prevent removal of xorg.conf
+# if no new values were chosen - might be fixed now.
 # 2. Add more choices.
 # 3. What else?
 
@@ -26,7 +27,7 @@ xorg_conf="/etc/X11/xorg.conf"
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
 # This text needs some work, depending on who will be reading it and
-# under what circumstances. Will this script run automaticall if the
+# under what circumstances. Will this script run automatically if the
 # xserver won't start? 
 echo "
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -83,7 +84,8 @@ fi
 # Select display driver
 while true; do
   echo "
-  Select a driver for your video card. (Enter the letter to choose.)
+  Select a driver for your video card. Enter the letter to choose one, 
+  or just hit the ENTER key to skip this section.
 
   a) ati - for ATI cards (this one will choose the right driver)
   b) radeon - for ATI cards
@@ -92,7 +94,8 @@ while true; do
   e) nouveau - for nvidia cards (Some say this one is evil.)
   f) intel - for Intel cards
   g) vesa - failsafe for most cards
-  ENTER) Skip driver selection
+  x) Enter a driver not listed.
+
   "
   read ans
   case $ans in
@@ -103,27 +106,64 @@ while true; do
     e) driver="nouveau" ; break ;;
     f) driver="intel" ; break ;;
     g) driver="vesa" ; break ;;
+    x) echo "Enter a driver not listed"
+         read driver ; break ;;
     *) break ;;
   esac
 done
 
 
 # Select display resolution
+choose_res () {
 while true; do
   echo "
-  Select a display resolution.
+  Select a display resolution. Choose the one you want as the default
+  resolution first. You will be asked if you want to add more.
+  To skip this section, just hit the ENTER key.
   
-  a) 1024x768
-  b) 1280x1024
-  c) 1366x768
-  ENTER) Skip this selection.
+  a) 640x480
+  b) 800x600  
+  c) 1024x768
+  d) 1152x864
+  e) 1280x1024
+  f) 1360x768
+  g) 1440x900
+  h) 1600x1024
+  i) 1600x1200
+  x) Enter a custom resolution
+
   "
   read ans
   case $ans in
-    a) resolution="1024x768" ; break ;;
-    b) resolution="1280x1024" ; break ;;
-    c) resolution="1366x768" ; break ;;
+    a) resolution="${resolution[@]} \"640x480\" " ; break ;;
+    b) resolution="${resolution[@]} \"800x600\" " ; break ;;
+    c) resolution="${resolution[@]} \"1024x768\" " ; break ;;
+    d) resolution="${resolution[@]} \"1152x864\" " ; break ;;
+    e) resolution="${resolution[@]} \"1280x1024\" " ; break ;;
+    f) resolution="${resolution[@]} \"1360x768\" " ; break ;;
+    g) resolution="${resolution[@]} \"1440x900\" " ; break ;;
+    h) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
+    i) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
+    j) echo "Enter a custom resolution:  "
+         read custom_res
+         resolution="${resolution[@]} \"$custom_res\" " ; break ;;
     *) break ;;
+  esac
+  
+done
+}
+choose_res
+
+
+while true; do
+  echo "${resolution[@]}
+  "
+  echo "Add another resolution?
+  (y or n)"
+  read ans
+  case $ans in
+    [Yy]*) choose_res ;;
+    [Nn]*) break ;;
   esac
 done
 
@@ -150,7 +190,7 @@ echo "
   xorg.conf will contain the following values:
   
   Display Driver		$driver
-  Screen Resolution		$resolution
+  Screen Resolution		${resolution[@]}
   Horizontal Sync Rate		$horiz
   Vertical Refresh Rate		$vert
   
@@ -159,7 +199,7 @@ read -p "  Hit ENTER when you're ready to proceed."
 
 
 # If any values were chosen, back up and clear xorg.conf  
-if [[ -n $horiz ]] || [[ -n $vert ]] || [[ -n $driver ]] || [[ -n resolution ]]; then
+if [[ -n $horiz ]] || [[ -n $vert ]] || [[ -n $driver ]] || [[ -n $resolution ]]; then
     if [[ -f $xorg_conf ]]; then
       mv $xorg_conf $xorg_conf.$(date +%Y%m%d_%s)
       touch $xorg_conf
@@ -196,7 +236,7 @@ EndSection
 fi
 
 # Screen resolution
-if [[ -n $resolution ]]; then
+if [[ -n ${resolution[@]} ]]; then
 echo "
 
 Section \"Screen\"
@@ -204,7 +244,7 @@ Section \"Screen\"
     Device         \"Device0\"
     Monitor        \"Monitor0\"
     SubSection     \"Display\"
-        Modes       \"$resolution\"
+        Modes       ${resolution[@]}
     EndSubSection
 EndSection
 
@@ -249,10 +289,12 @@ while true; do
   Some hardware doesn't work with kernel mode setting. If you want to
   try disabling it, you can do it here. You can also re-enable it here,
   in case disabling didn't help.
+
+  To skip this section, just hit the ENTER key.
   
   a) disable kms - You will be rebooted.
   b) re-enable kms - You will be rebooted.
-  c) Skip this part. Don't change it. Don't reboot now.
+
   "
   read ans
   case $ans in
@@ -264,7 +306,7 @@ while true; do
        update-grub
        reboot
        break ;;
-    c) break ;;
+    *) break ;;
   esac
 done
 
