@@ -4,3 +4,5 @@ http://www.ibiblio.org/refracta
 Update repo 4/4/2011 to contain versions that will appear in the upcoming
 refracta-6.0.4-xfce-icewm-beta
 
+Update April 10, 2011 - minor changes in the installer scripts.
+  Changes in repsit - added gnome-games to list; gdebi gets installed with Synaptic.
