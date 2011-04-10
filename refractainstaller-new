@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# installerz-refracta.05
+# refractainstaller-new (20110410)
 # Copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 # This is free software with NO WARRANTY. Use at your own risk!
 #
-
-##### TODO
-#       Cleanup echo markers
-#       Run it a few more times to test it!!!   <== <== <==
 
 
 # DESCRIPTION
@@ -70,6 +66,8 @@ See $error_log for details." &
 
 copy_excludes () {
         cat > "$rsync_excludes" <<EOF
+# It is safe to delete this file after installation.
+
 - /dev/*
 - /cdrom/*
 - /media/*
@@ -90,14 +88,14 @@ copy_excludes () {
 - /home/snapshot/
 EOF
     check_exit
+    chmod 666 "$rsync_excludes"
 }
-echo "@@@ one @@@"
+
 
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
 
-echo "@@@ two @@@"
 # Ask if user wants Simple Install or Expert Install
 install=$(zenity --list --title="Installation Mode" \
      --text="Choose whether you want to do a simple install or expert install." \
@@ -118,8 +116,6 @@ if $(echo $install | grep -q 03); then
     exit 0
 fi
 echo "$install"
-
-echo "@@@ three @@@"
 
 
 # Check that rsync excludes file exists, or create one.
@@ -207,7 +203,6 @@ if [[ $encrypt_os = "yes" ]] || [[ $encrypt_home = "yes" ]]; then
     # end test for cryptsetup
 fi    
 
-echo "@@@ four @@@"
 
 # Partition a disk ##### Simple install does not get to partition the disk - proceed or exit
 if [[ $install = "expert" ]]; then
@@ -227,7 +222,7 @@ You will be asked which partition to use. The installer will show you a summary 
         exit 0
     fi
 fi
-echo "@@@ five @@@"
+
 
 #    # test to make sure there's a separate /boot partition
 if [[ $sep_boot = "no" ]]; then
@@ -279,7 +274,7 @@ if [[ $install = "simple" ]]; then
     grub_dev="/dev/sda"
 fi
 
-echo "@@@ six @@@"
+
 # Show the partition list in a menu, and choose one for /boot
 choose_boot () {
 boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
@@ -354,7 +349,7 @@ fi
 }
 
 choose_root
-echo "@@@ seven @@@"
+
 
 # Choose filesystem type for OS.
 choose_fs_os () {
@@ -442,7 +437,7 @@ fi
 if [[ -n $home_dev ]]; then
     choose_fs_home
 fi
-echo "@@@ eight @@@"
+
 
 # Show a summary of what will be done
 if [[ $change_user = "yes" ]]; then
@@ -784,7 +779,7 @@ if [[ $encrypt_home = yes ]] ; then
     echo -e "home-fs\t\t$home_dev\t\tnone\t\tluks" >> /target/etc/crypttab
 fi
 
-echo "@@@ nine @@@"
+
 # mount stuff so grub will behave
 echo -e "\n Mounting tmpfs and proc...\n"
 mount -t tmpfs --bind /dev/ /target/dev/ ; check_exit 
@@ -814,19 +809,15 @@ if [[ -n $grub_dev ]]; then
     chroot /target update-grub ; check_exit 
 fi
 
-echo "@ten@"
 
-
-
-# BEGIN SPLICE FROM mkunlive.sh
-
+# INSTALLATION FINISHED - BEGIN CHANGE USERNAME
 
 # Need to mount the target home partition under the target root partition
 # so the commands can find it (for changing user configs gksu)
 if [[ $sep_home = "yes" ]]; then
     mount $home_part /target/home
 fi
-echo "@@@ eleven @@@"
+
 
 # Change the username
 if [[ $change_user = "yes" ]]; then
@@ -845,7 +836,7 @@ Enter the new login name you want to use.")
 	done
 fi
 
-echo "@@@ twelve @@@"
+
 #### Add user's real name in /etc/passwd (for Refracta)
 if [[ $change_user = "yes" ]]; then
     refracta_live_user="$(awk -F: '{ print $5 }' /target/etc/passwd)"
@@ -855,7 +846,7 @@ if [[ $change_user = "yes" ]]; then
     fi
 fi
 
-echo "@@@ thirteen @@@"
+
 # Edit /etc/sudoers
 if [[ $install = "expert" ]]; then
     zenity --question --title="Edit /etc/sudoers" --ok-label=Yes --cancel-label=No \
@@ -883,7 +874,7 @@ if [[ $edit_sudoers = "yes" ]]; then
 fi
 
 
-echo "@@@ fourteen @@@"
+
 # Change/create root password
 if [[ $install = "expert" ]]; then
     zenity --question --title="Change/create root password" --ok-label=Yes --cancel-label=No \
@@ -904,7 +895,6 @@ Change root password? (I really shouldn't give you a choice here.)"
 fi
 
 
-echo "@@@ fifteen @@@"
 # Change user password
 if [[ $change_user = "yes" ]]; then
     zenity --question --title="Change user password" --ok-label=Yes --cancel-label=No \
@@ -920,7 +910,7 @@ if [[ $change_user = "yes" ]]; then
         fi
 fi
 
-echo "@@@ sixteen @@@"
+
 # call cleanup function
 cleanup
 
