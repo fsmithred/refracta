@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# change-username.sh  (Refracta xfce/icewm version 2)
+# change-username.sh  (Refracta xfce/icewm 20110409)
 # Change user name from user to something else, for a live-build system
 # that was installed with refractainstaller.
 # Run as root with newname and oldname as arguments.
