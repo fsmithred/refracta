@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# repsit v.5
+# repsit (20110410)
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
@@ -8,16 +8,17 @@
 # If you add a package list here, you must also add it to the
 # zenity list around line 50 and to the if/then list below that.
 # Note that a list can contain one or more packages. 
-Synaptic=(synaptic)
+Synaptic=(synaptic gdebi)
 dvd_set=(libdvdcss2 libdvdnav4 libdvdread4)
 flash_vid=(flashplugin-nonfree sun-java6-plugin)
+gnome_games=(gnome-games)
 file_share_win=(samba smbfs smbclient)
 file_share_lin=(nfs-kernel-server nfs-common)
 graphics=(gimp blender inkscape)
 module_comp=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
 kernel_comp=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
 nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
-mousepad=(mousepad)
+
 
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
@@ -50,6 +51,7 @@ ans=$(zenity --list --title="Installation Menu" --text "Choose package groups to
   FALSE Synaptic "full-featured graphical package manager" \
   FALSE dvd_set "software to watch dvd movies" \
   FALSE flash_vid "install Adobe flash and Sun Java browser plugins" \
+  FALSE gnome_games "popular games from the gnome desktop" \
   FALSE file_share_win "share files with windows computers (smb)" \
   FALSE file_share_lin "share files with linux computers (nfs)" \
   FALSE graphics "programs for editing pictures and movies" \
@@ -73,6 +75,9 @@ if $(echo $ans | grep -q dvd_set) ; then
 fi
 if $(echo $ans | grep -q flash_vid) ; then
     install_list=("${install_list[@]}"  "${flash_vid[@]}")
+fi
+if $(echo $ans | grep -q gnome_games) ; then
+    install_list=("${install_list[@]}"  "${gnome_games[@]}")
 fi
 if $(echo $ans | grep -q file_share_win) ; then
     install_list=("${install_list[@]}"  "${file_share_win[@]}")
