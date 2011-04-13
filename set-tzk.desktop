@@ -1,6 +1,6 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=Time, Timezone, Keyboard
+Name=Set time, timezone, keyboard
 Comment=Set time, timezone and configure keyboard
 Exec=sudo /usr/local/bin/set-tzk
 Terminal=true
