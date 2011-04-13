@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# set-tzk.sh
+#
+# set the time, timezone and keyboard configuration
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
+
+# Select options
+options=$(zenity --list --title=Settings --checklist \
+   --text="Choose the items you want to configure" \
+   --column "Choose" --column "Num" --column "Option" \
+   --width=520 --height=220  \
+  FALSE 01 "Configure keyboard" \
+  FALSE 02 "Set timezone" \
+  FALSE 03 "Synchronize with network time server" \
+  FALSE xx "Exit" )
+
+if $(echo $options | grep -q xx); then
+    echo "Bye!"
+    exit 0
+fi
+if $(echo $options | grep -q 01); then
+    dpkg-reconfigure keyboard-configuration
+fi
+if $(echo $options | grep -q 02); then
+    dpkg-reconfigure tzdata
+fi
+if $(echo $options | grep -q 03); then
+    ntpdate-debian
+fi
+
+
+exit 0
