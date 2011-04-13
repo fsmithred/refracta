@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# set-tzk.sh
+# set-tzk
 #
 # set the time, timezone and keyboard configuration
 
