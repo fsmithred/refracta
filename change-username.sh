@@ -22,7 +22,6 @@ check_exit () {
 }
 
 
-
 # check root
 [[ $(id -un) = "root" ]] || { echo "You need to be root!" ; exit 1 ; }
 
@@ -39,15 +38,32 @@ if ! $(grep -q $oldname /etc/passwd) ; then
 fi
 
 # make sure that the user isn't logged in
-if $(who | grep -q $oldname); then
+#if $(who | grep -q $oldname); then
+#if $(ps aux | grep $oldname); then
+    while true; do
     echo "
-    $oldname is logged in and must log out before you can proceed.
+    $oldname must not be logged in if you want to proceed.
+    If you answer \"yes\", this script will stop the display manager and
+    kill any processes owned by $oldname. Say \"no\" if you want to exit
+    the script and go back to manually close any running programs.
+    
+    Kill ${oldname}'s processes now? (y or n)
+    
     "
-    exit 1
-fi
+        read ans
+        case $ans in
+          [Yy]*) pkill -u "$oldname"
+                 /etc/init.d/gdm stop ; break ;;
+          [Nn]*) exit 0
+        esac
+    done
+#else
+#    /etc/init.d/gdm stop
+#fi
+
 echo "    Changing user name and group...
     "
-sleep 2
+sleep 3
 
 # Change user name and group
 usermod -l $newname $oldname ; check_exit
@@ -129,12 +145,15 @@ while true; do
 done
 HOLD
 
+sleep 2
 # Edit /etc/sudoers
 while true; do
     echo "
+    You need to either comment out the line in /etc/sudoers that gives 
+    \"user\" absolute power,     or you need to replace \"user\" 
+    with the new user name. 
+
     Edit /etc/sudoers?  (yes or no)
-    You need to comment out the line that gives \"user\" absolute power,
-    or you need to replace \"user\" with the new user name. 
     "
     read ans
     case $ans in
@@ -143,7 +162,7 @@ while true; do
     esac
 done
 
-
+sleep 2
 # Disable sudo-mode for gksu
 while true; do
 echo "
