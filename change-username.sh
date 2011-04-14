@@ -63,7 +63,7 @@ fi
 
 echo "    Changing user name and group...
     "
-sleep 3
+sleep 4
 
 # Change user name and group
 usermod -l $newname $oldname ; check_exit
