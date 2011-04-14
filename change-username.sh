@@ -38,10 +38,8 @@ if ! $(grep -q $oldname /etc/passwd) ; then
 fi
 
 # make sure that the user isn't logged in
-#if $(who | grep -q $oldname); then
-#if $(ps aux | grep $oldname); then
-    while true; do
-    echo "
+while true; do
+echo "
     $oldname must not be logged in if you want to proceed.
     If you answer \"yes\", this script will stop the display manager and
     kill any processes owned by $oldname. Say \"no\" if you want to exit
@@ -50,16 +48,14 @@ fi
     Kill ${oldname}'s processes now? (y or n)
     
     "
-        read ans
-        case $ans in
-          [Yy]*) pkill -u "$oldname"
-                 /etc/init.d/gdm stop ; break ;;
-          [Nn]*) exit 0
-        esac
-    done
-#else
-#    /etc/init.d/gdm stop
-#fi
+    read ans
+    case $ans in
+      [Yy]*) pkill -u "$oldname"
+             /etc/init.d/gdm stop ; break ;;
+      [Nn]*) exit 0
+    esac
+done
+
 
 echo "    Changing user name and group...
     "
