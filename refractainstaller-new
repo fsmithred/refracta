@@ -631,10 +631,14 @@ echo -e "\n Creating filesystem on $install_dev...\n"
 mkdir /target ;  check_exit
 if [[ $encrypt_os = yes ]] ; then
     echo " You will need to create a passphrase."
+#   # Redirect stderr so we can see the output of dd
+    exec 2>&1
     cryptsetup luksFormat "$install_dev" ; check_exit
     echo "Encrypted partition created. Opening it..."
     cryptsetup luksOpen "$install_dev" root-fs ; check_exit
     install_part="/dev/mapper/root-fs"
+#       # Resume logging errors in file
+        exec 2>>"$error_log"
 else
     install_part="$install_dev"
 fi 
@@ -655,12 +659,16 @@ if [[ -n $home_dev ]] ; then
         echo "
  You will need to create a passphrase.
  "
+#   # Redirect stderr so we can see the output of dd
+    exec 2>&1
         cryptsetup luksFormat "$home_dev"
         check_exit
         echo "Encrypted partition created. Opening it..."
         cryptsetup luksOpen "$home_dev" home-fs
         check_exit
         home_part="/dev/mapper/home-fs"
+#       # Resume logging errors in file
+        exec 2>>"$error_log"
     else
         home_part=$home_dev
 fi
