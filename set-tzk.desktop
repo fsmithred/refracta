@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Set time, timezone, keyboard
+Comment=Set time, timezone and configure keyboard
+Exec=su -c /usr/local/bin/set-tzk
+Terminal=true
+Type=Application
+Icon=system
+Categories=System;
