@@ -1,0 +1,921 @@
+#!/usr/bin/env bash
+# refractainstaller-new (20110410)
+# Copyright 2011 fsmithred@gmail.com
+# License: GPL-3
+# This is free software with NO WARRANTY. Use at your own risk!
+#
+
+
+# DESCRIPTION
+# This script is used for installing a live system to a hard drive. User
+# input is via popup windows created by zenity. It should be run from
+# a terminal; if it's started from a menu item or a panel launcher, it
+# should be run in a persistent terminal, so that progress messages can
+# be seen and for user input in a few places.
+#
+# There are two modes for installation - Simple or Expert
+#   Simple Mode:
+# Create rsync excludes file (without prompting user)
+# Ask user if they have a partition ready, and if not, they can exit.
+# User selects partition for installation.
+# Summary window asks to proceed with installation.
+# Stuff happens without interaction.
+#
+#  Expert Mode:
+# User selects installation options - change username, select up to three
+# partitions (/, /boot, /home), select filesystem type for each partition, 
+# choose whether to encrypt partitions or not, choose whether to write 
+# random data or zeros to partitions.
+# User has option to exit and use custom excludes file.
+# User can run partitioner inside the installer.
+# Summary window asks to proceed with installation.
+# Stuff happens with some interaction (passwords, username, edit /etc/sudoers)
+#
+#  Stuff:
+# Cleanup (in case of previous aborted run)
+# Create encrypted volumes *(Expert mode only)
+# Write random data or zeros *
+# Mount partition(s) and create filesystem(s)
+# Copy system with rsync
+# Create swapfile
+# Copy update-initramfs
+# Set up fstab
+# Set up crypttab *
+# Install bootloader
+# Cleanup
+# Change username and passwords, edit /etc/sudoers *
+
+
+error_log="/var/log/refracta_install_errors.log"
+exec 2>"$error_log"
+
+# Experts can change this to a custom file
+rsync_excludes="./exclude.list"
+
+# function to exit the script if there are errors
+check_exit () {
+[[ $? -eq 0 ]] || { echo "
+  
+  Exit due to error:  $?
+  See $error_log for details.
+  " ; zenity --error --text="Exit due to error: $?
+See $error_log for details." &
+  exit 1 ; }
+}
+
+
+copy_excludes () {
+        cat > "$rsync_excludes" <<EOF
+# It is safe to delete this file after installation.
+
+- /dev/*
+- /cdrom/*
+- /media/*
+- /target
+- /swapfile
+- /mnt/*
+- /sys/*
+- /proc/*
+- /tmp/*
+- /live
+- /boot/grub/grub.cfg
+- /boot/grub/menu.lst
+- /boot/grub/device.map
+- /etc/udev/rules.d/70-persistent-cd.rules
+- /etc/udev/rules.d/70-persistent-net.rules
+- /etc/fstab
+- /etc/mtab
+- /home/snapshot/
+EOF
+    check_exit
+    chmod 666 "$rsync_excludes"
+}
+
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
+
+
+# Ask if user wants Simple Install or Expert Install
+install=$(zenity --list --title="Installation Mode" \
+     --text="Choose whether you want to do a simple install or expert install." \
+     --radiolist --column "Choose" --column "Num" --column "Option" \
+     --width=520 --height=220  \
+  FALSE 01 "Simple installation (one partition, few questions.)" \
+  FALSE 02 "Expert install (more options)" \
+  FALSE 03 "Exit - Get me out of here!")
+  
+if $(echo $install | grep -q 01); then
+    install="simple"
+fi
+if $(echo $install | grep -q 02); then
+    install="expert"
+fi
+if $(echo $install | grep -q 03); then
+    echo "Bye!"
+    exit 0
+fi
+echo "$install"
+
+
+# Check that rsync excludes file exists, or create one.
+if [[ $install = "expert" ]]; then
+# Check that rsync excludes file exists, or create one.
+    if ! [[ -f  $rsync_excludes ]] ; then
+        zenity --question --ok-label=Continue --cancel-label=Exit \
+        --text="There is no rsync excludes file, or its name does not match what this script expects. You should let the script create one, or if you have a custom exlcudes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
+    
+If you have any other drives or partitions mounted that you want to be copied, you'll need to edit the rsync commands to remove the -x."
+        if [[ $? = 0 ]] ; then
+            copy_excludes
+        else
+            exit 0
+        fi
+    fi
+else
+    copy_excludes
+fi
+
+
+
+# Select expert installation options
+if [[ $install = "expert" ]]; then
+    opts=$(zenity --list --title="Installation Options" \
+     --text="Check the options you want for the installation" \
+     --checklist --column "Choose" --column "Num" --column "Option" \
+     --width=590 --height=400  \
+  FALSE 01 "Change user name" \
+  FALSE 02 "Create a separate /home partition" \
+  FALSE 03 "Create a separate /boot partition" \
+  FALSE 04 "Encrypt the root filesystem (separate /boot required)" \
+  FALSE 05 "Encrypt the /home partition (separate /home required)" \
+  FALSE 06 "Write random data to encrypted partitions (more secure)" \
+  FALSE 07 "Write zeroes to all partitions (to erase previous data)" \
+  FALSE 08 "Do not install bootloader. I'll handle it myself." \
+  FALSE 09 "Exit the installation now.")
+echo "$opts"
+fi
+
+if $(echo $opts | grep -q 01); then 
+    change_user="yes"
+fi
+if $(echo $opts | grep -q 02); then
+    sep_home="yes"
+fi
+if $(echo $opts | grep -q 03); then
+    sep_boot="yes"
+fi
+if $(echo $opts | grep -q 04); then
+    encrypt_os="yes"
+fi
+if $(echo $opts | grep -q 05); then
+    encrypt_home="yes"
+fi
+if $(echo $opts | grep -q 06); then
+    write_random="yes"
+fi
+if $(echo $opts | grep -q 07); then
+    write_zero="yes"               
+fi
+if $(echo $opts | grep -q 08); then
+    bootloader="no"
+else
+    bootloader="yes"
+fi
+if $(echo $opts | grep -q 09); then
+    exit 0
+fi
+
+
+if [[ $encrypt_os = "yes" ]] || [[ $encrypt_home = "yes" ]]; then
+    # test for cryptsetup
+    if ! [[ -f /sbin/cryptsetup ]] ; then
+        zenity --question --title=Error \
+         --ok-label="Proceed without encrypting partitions" \
+         --cancel-label=Exit --text="You need to install cryptsetup and run the command, 'sudo modprobe dm-mod' before you can use encryption."
+        if [[ $? = 0 ]] ;  then
+            encrypt_os="no"
+            encrypt_home="no"
+        else
+            exit 1
+        fi
+    fi
+    # end test for cryptsetup
+fi    
+
+
+# Partition a disk ##### Simple install does not get to partition the disk - proceed or exit
+if [[ $install = "expert" ]]; then
+    zenity --question --title=Partitioning --ok-label=Yes --cancel-label=No \
+        --text="You need to have at least one partition ready for the installation, plus one for each separate partition that you chose. 
+
+Run GParted Partition Editor now?"
+    if [[ $? = 0 ]] ; then
+        gparted
+    fi
+elif [[ $install = "simple" ]]; then
+    zenity --question --title=Partitioning --ok-label=Proceed --cancel-label=Exit the installer \
+        --text="You need to have a partition ready for the installation. If you know where you're going to install the system, then proceed. Otherwise, you should exit.
+
+You will be asked which partition to use. The installer will show you a summary of what will be done, and it will give you a chance to exit or proceed with the installation. If you proceed at that point, the partition you chose for installation will be formatted, and any data on it will be erased."
+    if ! [[ $? = 0 ]]; then
+        exit 0
+    fi
+fi
+
+
+#    # test to make sure there's a separate /boot partition
+if [[ $sep_boot = "no" ]]; then
+    if [[ $encrypt_os = "yes" ]]; then
+        zenity --question --title=Error \
+         --ok-label="Proceed without encrypting partition" \
+         --cancel-label=Exit --text="You MUST have a separate, unencrypted /boot partition if you intend to boot an encrypted operating system. You can proceed without encrypting the root filesystem, or you can exit and start over."
+        if [[ $? = 0 ]] ;  then
+            encrypt_os="no"
+        else
+            exit 1
+        fi
+    fi
+fi
+
+
+# Find hard drives, and choose one for grub
+choose_grub () {
+grub_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z]" \
+  | sort | awk '{print "FALSE\n" $0 }' \
+  | zenity --list --title=Bootloader --text="Choose a location to install the bootloader." \
+ --radiolist --multiple --column ' ' --column 'Hard Drives' --height=200)
+
+if [[ -z $grub_dev ]] ; then
+    zenity --question --title=Error --ok-label="Yes, I'm sure." --cancel-label="Go back" \
+  --text="No bootloader will be installed. Are you sure you want this?"
+        if [[ $? != 0 ]] ; then
+            choose_grub
+        fi
+elif ! [[ -b $grub_dev ]] ; then
+    zenity --question --title=Error  --ok-label=Exit --cancel-label="Go back" \
+  --text="Something is wrong. Maybe you checked more than one box. You said you want to install the bootloader in $grub_dev"
+        if [[ $? = 0 ]] ; then
+            exit 1
+        else
+            choose_grub
+        fi
+fi
+}
+
+### Simple install gets default grub bootloader in /dev/sda
+if [[ $install = "expert" ]]; then
+    if [[ $bootloader = "yes" ]]; then
+        choose_grub
+    fi
+fi
+
+if [[ $install = "simple" ]]; then
+    grub_dev="/dev/sda"
+fi
+
+
+# Show the partition list in a menu, and choose one for /boot
+choose_boot () {
+boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+  | sort | awk '{print "FALSE\n" $0 }' \
+  | zenity --list --title="/boot partition" --text="Select a partition for /boot." \
+ --radiolist --multiple --column ' ' --column 'Partitions' --height=380 --width=150)
+echo "boot_dev is $boot_dev"
+}
+
+if [[ $sep_boot = "yes" ]]; then
+    choose_boot
+fi
+
+
+# Choose filesystem type for /boot
+choose_fs_boot () {
+if [[ -n $boot_dev ]]; then
+     fs_type_boot=$(zenity --list --title="/boot filesystem" --text="What type of filesystem would you like on $boot_dev?" \
+  --radiolist --column "Choose" --column "Format" --height=200\
+  FALSE "ext2" \
+  FALSE "ext3" \
+  FALSE "ext4")
+fi
+
+if [[ -z $fs_type_boot ]]; then
+    zenity --question --title=Error --ok-label="Go back" --cancel-label=Exit \
+      --text="You must choose a file system type for /boot"
+    if [[ $? = 0 ]]; then
+        choose_fs_boot
+    else
+        exit 1
+    fi
+fi
+}
+
+if [[ -n $boot_dev ]]; then
+    choose_fs_boot
+fi
+
+
+
+# Show the partition list in a menu, and choose one for the OS
+choose_root () {
+install_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+  | sort | awk '{print "FALSE\n" $0 }' \
+  | zenity --list --title="Root Partition" --text="Choose a partition to use for the installation of the operating system." \
+--radiolist --multiple --column ' ' --column 'Partitions' --height 380 --width 150)
+
+if [[ -z $install_dev ]] ; then
+    zenity --question  --title=Error --ok-label="Go back" --cancel-label="Exit" \
+  --text="Nothing was selected. You must select a partition for the installation. What would you like to do?"
+        if [[ $? = 0 ]] ; then
+            choose_root
+        else
+            exit 1
+        fi
+elif ! [[ -b $install_dev ]] ; then
+    zenity --question --title=Error --ok-label="Go back" --cancel-label="Exit" \
+  --text="    Something is wrong. Maybe you checked
+    more than one box. You said you want to install
+    the system to $install_dev"
+        if [[ $? = 0 ]] ; then
+            choose_root
+        else
+            exit 1
+        fi
+elif
+    [[ $install_dev = $boot_dev ]] ; then
+    zenity --info --title=Error --text="You chose the same partition for the operating system as the one for /boot. Try again."
+        choose_root
+fi
+}
+
+choose_root
+
+
+# Choose filesystem type for OS.
+choose_fs_os () {
+fs_type_os=$(zenity --list --title="Root Filesystem" --text="What type of filesystem would you like on $install_dev?" \
+  --radiolist --column "Choose" --column "Format" --height=200\
+  FALSE "ext2" \
+  FALSE "ext3" \
+  FALSE "ext4")
+if [[ -z $fs_type_os ]]; then
+    zenity --question --ok-label="Go back" --cancel-label=Exit \
+      --text="You must choose a file system type
+for the operating system"
+    if [[ $? = 0 ]]; then
+        choose_fs_os
+    else
+        exit 1
+    fi
+fi  
+}
+
+
+### Simple install gets default ext4 filesystem
+if [[ $install = "expert" ]]; then
+    choose_fs_os
+else
+    fs_type_os="ext4"
+fi
+
+
+
+# Show the partition list in a menu, and choose one for /home
+choose_home () {
+home_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+  | sort | awk '{print "FALSE\n" $0 }' \
+  | zenity --list --title="/home partition" --text="Select a partition for /home" \
+--radiolist --multiple --column ' ' --column 'Partitions' --height=380 --width=150)
+if [[ -n $home_dev ]] ; then
+    if ! [[ -b $home_dev ]] ; then
+        zenity --question  --ok-label="Go back" --cancel-label=Exit \
+        --text="    Something is wrong. Maybe you checked
+    more than one box. You said you want to install
+    the system to $home_dev"
+        if [[ $? = 0 ]] ; then
+            choose_home
+        else
+            exit 1
+        fi
+    elif
+        [[ $install_dev = $home_dev ]] ; then
+        zenity --info --title=Error --text="You chose the same partition for /home as the one for the operating system. If you don't want a separate /home partition, then click OK without selecting one."
+        choose_home
+    elif
+        [[ $boot_dev = $home_dev ]] ; then
+        zenity --info --title=Error --text="You chose the same partition for /home as the one for /boot. Try again."
+        choose_home
+    fi
+fi
+}
+
+if [[ $sep_home = "yes" ]]; then
+    choose_home
+fi
+
+# Choose filesystem type for /home
+choose_fs_home () {
+if [[ -n $home_dev ]]; then
+     fs_type_home=$(zenity --list --title="/home filesystem" --text="What type of filesystem would you like on $home_dev?" \
+  --radiolist --column "Choose" --column "Format" --height=200\
+  FALSE "ext2" \
+  FALSE "ext3" \
+  FALSE "ext4")
+fi
+
+if [[ -z $fs_type_home ]]; then
+    zenity --question --title=Error --ok-label="Go back" --cancel-label=Exit \
+      --text="You must choose a file system type for /home"
+    if [[ $? = 0 ]]; then
+        choose_fs_home
+    else
+        exit 1
+    fi
+fi
+}
+
+if [[ -n $home_dev ]]; then
+    choose_fs_home
+fi
+
+
+# Show a summary of what will be done
+if [[ $change_user = "yes" ]]; then
+    user_message="User name will be changed."
+fi
+
+if [[ -z $grub_dev ]] ; then
+    grub_dev_message="--> Bootloader will not be installed."
+else
+    grub_dev_message="--> Bootloader will be installed in $grub_dev"
+fi
+
+if [[ $encrypt_os = yes ]] ; then
+    os_enc_message=", and will be encrypted."
+fi
+
+if [[ -z $home_dev ]] ; then
+    home_dev_message="--> /home will not be on a separate partition."
+else
+    home_dev_message="--> /home will be installed on $home_dev and formatted as $fs_type_home"
+fi
+
+if [[ -n $home_dev ]] && [[ $encrypt_home = yes ]] ; then
+    home_enc_message=", and will be encrypted."
+fi
+
+if [[ -n $boot_dev ]] ; then
+    boot_dev_message="--> /boot will be installed on $boot_dev and formatted as $fs_type_boot."
+fi
+
+if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
+    proceed_message="***  IF YOU PROCEED, YOU WILL NEED TO RESPOND TO SOME QUESTIONS IN THE TERMINAL.   Be prepared to create passphrases for any encrypted partitions (several times each.) When you see the progress bar come up, you can take a break."
+fi
+
+zenity --question --title=Summary --ok-label="Proceed with the installation." --cancel-label="Exit" \
+    --text="Here is a summary of what will be done. THIS IS YOUR LAST CHANCE TO EXIT before any changes are made to the disk.
+
+$grub_dev_message
+--> Operating system will be installed on $install_dev and formatted as $fs_type_os$os_enc_message
+$home_dev_message$home_enc_message
+$boot_dev_message
+$user_message
+$desktop_message
+$console_message
+
+$proceed_message"
+    if [[ $? != 0 ]] ; then
+        exit 0
+    fi
+
+
+# Actual installation begins here
+
+# Unmount or close anything that might need unmounting or closing
+cleanup () {
+echo -e "\n Cleaning up...\n"
+if $(df | grep -q /target/proc/) ; then
+    umount /target/proc/
+fi
+
+if $(df | grep -q /target/dev/) ; then
+    umount /target/dev/
+fi
+
+if $(df | grep -q /target/sys/) ; then
+    umount /target/sys/
+fi
+
+# grep gives an error if $boot_dev is null
+if $(df | grep -q $boot_dev) ; then
+    umount $boot_dev
+fi
+
+if $(df | grep -q /target_home) ; then
+    umount -l /target_home/
+fi
+
+# grep gives an error if $home is null
+if $(df | grep -q $home_dev) ; then
+    umount $home_dev
+fi
+
+if $(df | grep -q "\/dev\/mapper\/home-fs") ; then
+    umount /dev/mapper/home-fs
+fi
+
+if [[ -h /dev/mapper/home-fs ]] ; then
+    cryptsetup luksClose home-fs
+fi
+
+if $(df | grep -q /target) ; then
+    umount -l /target/
+fi
+
+if $(df | grep -q $install_dev) ; then
+    umount $install_dev
+fi    
+
+if $(df | grep "\/dev\/mapper\/root-fs") ; then
+    umount /dev/mapper/root-fs
+fi
+
+if [[ -h /dev/mapper/root-fs ]] ; then
+    cryptsetup luksClose /dev/mapper/root-fs
+fi
+
+
+# These next ones might be unnecessary
+if [[ -d /target ]] ; then
+    rm -rf /target
+fi
+
+if [[ -d /target_home ]] ; then
+    rm -rf /target_home
+fi
+
+if [[ -d /target_boot ]] ; then
+    rm -rf /target_boot
+fi
+}
+
+cleanup
+
+
+# Write random data to OS partition
+if [[ $write_random = "yes" ]]; then
+    if [[ $encrypt_os = "yes" ]]; then
+#       # Redirect stderr so we can see the output of dd
+        echo "
+ Writing random data to $install_dev
+ "
+        exec 2>&1
+        dd if=/dev/urandom of="$install_dev"
+#       # Resume logging errors in file
+        exec 2>>"$error_log"
+    else
+        echo "
+ $install_dev is not to be encrypted; skipping random data write!!!
+ "
+    fi  
+fi
+
+# Write random data to /home partition
+if [[ $write_random = "yes" ]]; then
+    if [[ $encrypt_home = "yes" ]]; then
+#       # Redirect stderr so we can see the output of dd
+        echo "
+ Writing random data to $home_dev
+ "
+        exec 2>&1
+        dd if=/dev/zero of="$home_dev"
+#       # Resume logging errors in file
+        exec 2>>"$error_log"
+    else
+        echo "
+ $home_dev is not to be encrypted; skipping random data write!!!
+ "
+    fi  
+fi
+
+
+# Write zeros to partitions
+if [[ $write_zero = "yes" ]]; then
+    echo "
+ Writing zeros to erase old data on $install_dev
+ "
+#   # Redirect stderr so we can see the output of dd
+    exec 2>&1
+    dd if=/dev/urandom of="$install_dev"
+    if [[ $sep_home = "yes" ]]; then
+        echo "
+ Writing zeros to erase old data on $home_dev
+ "
+        dd if=/dev/zero of="$home_dev"
+    fi
+    if [[ $sep_boot = "yes" ]]; then
+        echo "
+ Writing zeros to erase old data on $boot_dev
+ "
+        dd if=/dev/zero of="$boot_dev"
+    fi
+#       # Resume logging errors in file
+        exec 2>>"$error_log"
+fi
+
+
+# make mount point, format, adjust reserve and mount
+# install_dev must maintain the device name for cryptsetup
+# install_part will be either device name or /dev/mapper name as needed.
+echo -e "\n Creating filesystem on $install_dev...\n"
+mkdir /target ;  check_exit
+if [[ $encrypt_os = yes ]] ; then
+    echo " You will need to create a passphrase."
+    cryptsetup luksFormat "$install_dev" ; check_exit
+    echo "Encrypted partition created. Opening it..."
+    cryptsetup luksOpen "$install_dev" root-fs ; check_exit
+    install_part="/dev/mapper/root-fs"
+else
+    install_part="$install_dev"
+fi 
+mke2fs -t $fs_type_os "$install_part" ; check_exit 
+tune2fs -r 10000 "$install_part" ; check_exit 
+mount "$install_part" /target ; check_exit 
+
+
+# make mount point for separate home if needed
+# and add /home/* to the excludes list if it's not already there
+if [[ -n $home_dev ]] ; then
+    echo "
+    
+ Creating filesystem on $home_dev...
+    "
+    mkdir /target_home ; check_exit
+    if [[ $encrypt_home = yes ]]; then
+        echo "
+ You will need to create a passphrase.
+ "
+        cryptsetup luksFormat "$home_dev"
+        check_exit
+        echo "Encrypted partition created. Opening it..."
+        cryptsetup luksOpen "$home_dev" home-fs
+        check_exit
+        home_part="/dev/mapper/home-fs"
+    else
+        home_part=$home_dev
+fi
+    mke2fs -t $fs_type_home "$home_part" ; check_exit
+    tune2fs -r 10000 "$home_part" ; check_exit
+    mount "$home_part" /target_home ; check_exit
+    if ! $(grep -q "\/home\/\*" "$rsync_excludes"); then
+        echo "- /home/*" >> "$rsync_excludes"
+    fi
+fi
+
+
+# make mount point for separate /boot if needed
+# and add /boot/* to the excludes list if it's not already there
+# allow default for reserved blocks (don't need tune2fs here)
+if [[ -n $boot_dev ]] ; then
+    mkdir /target_boot ; check_exit
+    mke2fs -t $fs_type_boot $boot_dev ; check_exit
+    mount $boot_dev /target_boot
+    if ! $(grep -q "\/boot\/\*" "$rsync_excludes"); then
+        echo "- /boot/*" >> "$rsync_excludes"
+    fi
+fi
+
+
+# make sure there's not a leftover entry in excludes list for /home/*
+# or /boot/* from a previous run if not needed this time.
+if [[ -z $boot_dev ]] ; then
+    sed -i 's:- /boot/\*::' "$rsync_excludes"
+fi
+
+if [[ -z $home_dev ]] ; then
+    sed -i 's:- /home/\*::' "$rsync_excludes"
+fi
+
+
+# copy everything over except the things listed in the exclude list
+echo -e "\n Copying system to new partition.\n Wait...\n"
+rsync -avx / /target/ --exclude-from="$rsync_excludes" | \
+tee >(zenity --progress --pulsate --auto-close \
+ --text="Copying system to new partition.")
+check_exit 
+
+# copy separate /home if needed
+echo -e "\n Copying home folders to new partition.\n Wait...\n"
+if ! [[ -z $home_dev ]] ; then
+    rsync -avx /home/ /target_home/ --exclude=/home/snapshot | \
+    tee >(zenity --progress --pulsate --auto-close \
+     --text="Copying home folders to new partition.")
+    check_exit
+fi
+
+# copy separate /boot if needed
+if [[ -n $boot_dev ]] ; then
+    echo -e "\n Copying files to boot partitions...\n"
+    rsync -avx /boot/ /target_boot/ ; check_exit | \
+    tee >(zenity --progress --pulsate --auto-close \
+     --text="Copying files to boot partition.")
+    check_exit
+fi
+
+
+# create swap
+echo -e "\n Making a swap file.\n Wait...\n"
+dd if=/dev/zero of=/target/swapfile bs=1024 count=262144 | \
+tee >(zenity --progress --pulsate --auto-close \
+ --text="Making a swap file...")
+check_exit 
+mkswap /target/swapfile ; check_exit 
+
+
+# copy the real update-initramfs back in place
+echo -e "\n Copying update-initramfs...\n"
+if [[ -f /target/usr/sbin/update-initramfs.distrib ]] ; then
+    cp /target/usr/sbin/update-initramfs.distrib /target/usr/sbin/update-initramfs
+fi
+if [[ -f /target/usr/sbin/update-initramfs.debian ]] ; then
+    cp /target/usr/sbin/update-initramfs.debian /target/usr/sbin/update-initramfs
+fi
+
+
+# setup fstab
+echo -e "\n Creating /etc/fstab...\n"
+echo -e "proc\t\t/proc\tproc\tdefaults\t0\t0
+/swapfile\tswap\tswap\tdefaults\t0\t0
+$install_part\t/\t$fs_type_os\tdefaults,noatime\t0\t1" >> /target/etc/fstab
+check_exit
+
+
+# add entry for /home to fstab if needed
+if ! [[ -z $home_dev ]] ; then
+    echo -e "\n Adding /home entry to fstab...\n"
+    echo -e "$home_part\t/home\t$fs_type_home\tdefaults,noatime\t0\t2" >> /target/etc/fstab
+    check_exit
+fi
+
+
+# add entry for /boot to fstab if needed
+if [[ -n $boot_dev ]] ; then
+    echo -e "\n Adding /boot entry to fstab...\n"
+    echo -e "$boot_dev\t/boot\t$fs_type_boot\tdefaults,noatime,\t0\t2" >> /target/etc/fstab
+    check_exit
+fi
+
+
+# Add entry for root filesystem to crypttab if needed
+if [[ $encrypt_os = yes ]] ; then
+    echo -e "\n Adding $install_part entry to crypttab...\n"
+    echo -e "root-fs\t\t$install_dev\t\tnone\t\tluks" >> /target/etc/crypttab
+fi
+
+
+# Add entry for /home to crypttab if needed
+if [[ $encrypt_home = yes ]] ; then
+    echo -e "\n Adding $home_part entry to crypttab...\n"
+    echo -e "home-fs\t\t$home_dev\t\tnone\t\tluks" >> /target/etc/crypttab
+fi
+
+
+# mount stuff so grub will behave
+echo -e "\n Mounting tmpfs and proc...\n"
+mount -t tmpfs --bind /dev/ /target/dev/ ; check_exit 
+mount -t proc --bind /proc/ /target/proc/ ; check_exit 
+mount -t sysfs --bind /sys/ /target/sys/ ; check_exit 
+
+
+# Setup GRUB 
+
+
+# If /boot is separate partition, need to mount it in chroot for grub
+if [[ -n $boot_dev ]] ; then
+    chroot /target mount $boot_dev /boot
+fi
+
+if [[ -n $grub_dev ]]; then
+    echo -e "\n Installing the boot loader...\n"
+    chroot /target grub-install $grub_dev ; check_exit
+fi
+
+# Run update-initramfs to include dm-mod if using encryption
+if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
+    chroot /target update-initramfs -u
+fi
+
+if [[ -n $grub_dev ]]; then
+    chroot /target update-grub ; check_exit 
+fi
+
+
+# INSTALLATION FINISHED - BEGIN CHANGE USERNAME
+
+# Need to mount the target home partition under the target root partition
+# so the commands can find it (for changing user configs gksu)
+if [[ $sep_home = "yes" ]]; then
+    mount $home_part /target/home
+fi
+
+
+# Change the username
+if [[ $change_user = "yes" ]]; then
+	oldname=$(awk -F: '/1000:1000/ { print $1 }' /target/etc/passwd)
+	newname=$(zenity --entry --title="Change user name" --text="The primary user's current login name is $oldname. 
+Enter the new login name you want to use.")
+
+	echo "New user name is $newname"
+
+	chroot /target usermod -l $newname $oldname ; check_exit
+	chroot /target groupmod -n $newname $oldname ; check_exit
+	chroot /target usermod -d /home/$newname -m $newname ; check_exit
+
+	for i in $(grep -r "/home/$oldname" /target/home/$newname/.config | awk -F":" ' { print $1 }'); do
+		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i" ; check_exit
+	done
+fi
+
+
+#### Add user's real name in /etc/passwd (for Refracta)
+if [[ $change_user = "yes" ]]; then
+    refracta_live_user="$(awk -F: '{ print $5 }' /target/etc/passwd)"
+    if [[ $refracta_live_user = ",,," ]]; then
+        real_name=$(zenity --entry --title="Change user name" --text="Enter the user's real name.")
+        sed -i~ "s/$refracta_live_user/$real_name/" /target/etc/passwd
+    fi
+fi
+
+
+# Edit /etc/sudoers
+if [[ $install = "expert" ]]; then
+    zenity --question --title="Edit /etc/sudoers" --ok-label=Yes --cancel-label=No \
+     --text="You should edit /etc/sudoers to comment out the last line, which gives \"user\" absolute power, or replace \"user\" with the new user name. A simple text-editor will open in the terminal if you do this now.
+ 
+Edit /etc/sudoers now?"
+    if [[ $? = 0 ]]; then
+        edit_sudoers="yes"
+        chroot /target visudo
+    fi
+fi
+
+
+# Disable sudo-mode for gksu
+if [[ $edit_sudoers = "yes" ]]; then
+    zenity --question --title="Disable sudo mode for gksu" --ok-label="Yes, I commented out the line." --cancel-label="No, I replaced \"user\" with the new username." \
+     --text="If you commented out the last line in /etc/sudoers in the last step, one more file will be changed for you so that gksu will work properly."
+        if [[ $? = 0 ]]; then
+            if [[ -n $newname ]]; then
+                sed -i~ '/sudo-mode/s/true/false/' /target/home/"$newname"/.gconf/apps/gksu/%gconf.xml
+            else
+                sed -i~ '/sudo-mode/s/true/false/' /target/home/user/.gconf/apps/gksu/%gconf.xml
+            fi
+        fi
+fi
+
+
+
+# Change/create root password
+if [[ $install = "expert" ]]; then
+    zenity --question --title="Change/create root password" --ok-label=Yes --cancel-label=No \
+     --text="The root password is currently \"root\" and should be changed to something more secure.
+ 
+You'll need to go to the terminal again...
+ 
+Change root password? (I really shouldn't give you a choice here.)"
+        if [[ $? = 0 ]]; then
+#           # Redirect stderr from the error log to the screen, 
+#           # so we can see the prompts from passwd
+            exec 2>&1
+            echo "Change root passowrd"
+            chroot /target passwd
+#           # Resume logging errors in file
+            exec 2>>"$error_log"
+        fi 
+fi
+
+
+# Change user password
+if [[ $change_user = "yes" ]]; then
+    zenity --question --title="Change user password" --ok-label=Yes --cancel-label=No \
+     --text="Would you like to change the user's password? The new user still has the old user's password. You'll need to go to the terminal again to do this."
+        if [[ $? = 0 ]]; then
+#           # Redirect stderr from the error log to the screen, 
+#           # so we can see the prompts from passwd
+            exec 2>&1
+            echo "Change user passowrd"
+            chroot /target passwd "$newname"
+#           # Resume logging errors in file
+            exec 2>>"$error_log"
+        fi
+fi
+
+
+# call cleanup function
+cleanup
+
+
+echo -e "\n\t Done!\n\n You may now reboot into the new system.\n\nRemember to remove your installation media."
+zenity --info --text="Done!\n\n You may now reboot into the new system.\n\nRemember to remove your installation media.\n"
+
+exit 0
