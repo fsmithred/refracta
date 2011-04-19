@@ -2,7 +2,7 @@
 Encoding=UTF-8
 Name=Set time, timezone, keyboard
 Comment=Set time, timezone and configure keyboard
-Exec=sudo /usr/local/bin/set-tzk
+Exec=su -c /usr/local/bin/set-tzk
 Terminal=true
 Type=Application
 Icon=system
