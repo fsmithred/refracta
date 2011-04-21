@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# refractainstaller3.sh
+# refractainstaller-nogui.sh (20110410)
 # Copyright 2011 fsmithred@gmail.com
 # Licence: GPL-3
 # This is free software with no warrantees. Use at your own risk.
@@ -8,24 +8,23 @@
 # you the option to install the entire system to one partition or to
 # install with /home on a separate partition. 
 
-# NOTE: right now, errors are logged to error_log in the directory
-# where the script is running. If this script gets put someplace like
-# /usr/bin or other system directory, we need to put the error log
-# someplace convenient for the user to find it, along with a message
-# telling the user where it is.
-
-# NOTE2: If you try to tee this to an install log, you won't see it
+# NOTE: If you try to tee this to an install log, you won't see it
 # when cryptsetup asks you to confirm with YES.
 
 
-error_log="error_log.txt"
+error_log="/var/log/refracta_install_errors.log"
 exec 2>"$error_log"
 
 rsync_excludes="./exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
-[[ $? -eq 0 ]] || { echo "Exit due to error:  $?" ; exit 1 ; }
+[[ $? -eq 0 ]] || { echo "
+  
+  Exit due to error:  $?
+  See $error_log for details.
+  "
+  exit 1 ; }
 }
 
 # Check that user is root.
@@ -47,6 +46,8 @@ if ! [[ -f  $rsync_excludes ]] ; then
  "
     sleep 2
     cat > "$rsync_excludes" <<EOF
+# It is safe to delete this file after installation.
+
 - /dev/*
 - /cdrom/*
 - /media/*
@@ -67,6 +68,7 @@ if ! [[ -f  $rsync_excludes ]] ; then
 - /home/snapshot/
 EOF
 check_exit
+chmod 666 "$rsync_excludes"
 fi 
 
 
@@ -107,7 +109,6 @@ while true; do
     esac
 done
 
-echo "@one@"
 
 # Leave these variables blank. You will be asked to provide values.
 grub_dev=
@@ -145,11 +146,11 @@ if [[ -z $grub_dev ]] ; then
     done
 fi
 
-echo "@two@"
+
 if [[ -n $grub_dev ]] ; then
     [[ -b $grub_dev ]] || { echo "$grub_dev does not exist!" ; exit 1 ; }
 fi
-echo "@three@"
+
 
 # Enter device for /boot partition or skip. If one is entered, test it.
 echo -n "
@@ -160,7 +161,6 @@ echo -n "
  (give the full device name, like /dev/sda1): "
  
 read boot_dev
-echo "@four@"
 echo "$boot_dev"
 if ! [[ -z $boot_dev ]] && ! [[ -b $boot_dev ]] ; then
     echo " $boot_dev does not exist!
@@ -172,7 +172,8 @@ if ! [[ -z $boot_dev ]] && ! [[ -b $boot_dev ]] ; then
     echo "Press ENTER when you're ready to continue"
     read -p " "
 fi
-echo "@five@"
+
+
 # Choose filesystem type for /boot if it exists.
 if [[ -n $boot_dev ]] ; then
     while true; do
@@ -223,7 +224,7 @@ while true; do
       4) fs_type_os="ext4" ; break ;;
     esac
 done
-echo "@six@"
+
 
 # Decide if OS should be encrypted
 while true; do
@@ -325,7 +326,8 @@ if [[ -n $home_dev ]] ; then
         esac
     done
 fi
-echo "@seven@"
+
+
 # Decide if /home should be encrypted
 if [[ -n $home_dev ]] ; then
     while true; do
@@ -362,7 +364,6 @@ if [[ -n $home_dev ]] ; then
     esac
     done
 fi
-echo "@eight@"
 
 
 # Show a summary of what will be done
@@ -634,16 +635,20 @@ if [[ -n $boot_dev ]] ; then
 fi
 
 chroot /target grub-install $grub_dev ; check_exit
-echo "@ten@"
+
 # Run update-initramfs to include dm-mod if using encryption
 if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
     chroot /target update-initramfs -u
 fi
 
 chroot /target update-grub ; check_exit
-echo "@eleven@"
+
 
 # call cleanup function
 cleanup
 
-echo -e "\n\t Done!\n\n You may now reboot into the new system.\n\n"
+echo "
+    Done! You may now reboot into the new system.
+    If you want to change the user name, then run
+    change_username.sh after reboot.
+    "
