@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# refractainstaller-new (20110410)
+# refractainstaller-new (20110617)
 # Copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 # This is free software with NO WARRANTY. Use at your own risk!
@@ -86,6 +86,7 @@ copy_excludes () {
 - /etc/fstab
 - /etc/mtab
 - /home/snapshot/
+- /home/user/.gvfs
 EOF
     check_exit
     chmod 666 "$rsync_excludes"
@@ -125,7 +126,7 @@ if [[ $install = "expert" ]]; then
         zenity --question --ok-label=Continue --cancel-label=Exit \
         --text="There is no rsync excludes file, or its name does not match what this script expects. You should let the script create one, or if you have a custom exlcudes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
     
-If you have any other drives or partitions mounted that you want to be copied, you'll need to edit the rsync commands to remove the -x."
+If you have any other drives or partitions mounted that you don't want to be copied, unmount them or edit the rsync commands to add the -x option."
         if [[ $? = 0 ]] ; then
             copy_excludes
         else
@@ -699,7 +700,7 @@ fi
 
 # copy everything over except the things listed in the exclude list
 echo -e "\n Copying system to new partition.\n Wait...\n"
-rsync -avx / /target/ --exclude-from="$rsync_excludes" | \
+rsync -av / /target/ --exclude-from="$rsync_excludes" | \
 tee >(zenity --progress --pulsate --auto-close \
  --text="Copying system to new partition.")
 check_exit 
@@ -707,7 +708,7 @@ check_exit
 # copy separate /home if needed
 echo -e "\n Copying home folders to new partition.\n Wait...\n"
 if ! [[ -z $home_dev ]] ; then
-    rsync -avx /home/ /target_home/ --exclude=/home/snapshot | \
+    rsync -av /home/ /target_home/ --exclude=/home/snapshot | \
     tee >(zenity --progress --pulsate --auto-close \
      --text="Copying home folders to new partition.")
     check_exit
@@ -716,7 +717,7 @@ fi
 # copy separate /boot if needed
 if [[ -n $boot_dev ]] ; then
     echo -e "\n Copying files to boot partitions...\n"
-    rsync -avx /boot/ /target_boot/ ; check_exit | \
+    rsync -av /boot/ /target_boot/ ; check_exit | \
     tee >(zenity --progress --pulsate --auto-close \
      --text="Copying files to boot partition.")
     check_exit
@@ -831,11 +832,10 @@ Enter the new login name you want to use.")
 	chroot /target groupmod -n $newname $oldname ; check_exit
 	chroot /target usermod -d /home/$newname -m $newname ; check_exit
 
-	for i in $(grep -r "/home/$oldname" /target/home/$newname/.config | awk -F":" ' { print $1 }'); do
-		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i" ; check_exit
+	for i in $(grep -r "/home/$oldname" /target/home/$newname/.config | awk -F":" '{ print $1 }'); do
+		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i"
 	done
 fi
-
 
 #### Add user's real name in /etc/passwd (for Refracta)
 if [[ $change_user = "yes" ]]; then
