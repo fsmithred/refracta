@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# refractasnapshot-nogui-0.04
+# refractasnapshot-nogui-0.04 (20110718)
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script. I'm losing track of who did what.
@@ -18,9 +18,14 @@
 # Default is /etc/refractasnapshot.conf
 # If you want to use a different config file for testing, change this
 # variable. Normally, users should not edit anything in this script.
-configfile="/home/user/refractasnapshot.conf"
+configfile="/etc/refractasnapshot.conf"
 if [[ -f $configfile ]]; then
     source $configfile
+fi
+
+##### This can be removed from the final version
+if ! [[ -d /usr/local/lib/refractasnapshot/iso/live ]]; then
+	mkdir -p /usr/local/lib/refractasnapshot/iso/live
 fi
 
 # Check for values in $configfile and use them.
@@ -29,9 +34,9 @@ error_log=${error_log:="/var/log/refractasnapshot_errors.log"}
 work_dir=${work_dir:="/tmp/work"}
 snapshot_dir=${snapshot_dir:="/home/snapshot"}
 save_work=${save_work:="no"}
-snapshot_exlcudes=${snapshot_excludes:="/usr/local/lib/refractasnapshot/exclude.list"}
+snapshot_excludes=${snapshot_excludes:="/usr/local/lib/refractasnapshot/exclude.list"}
 kernel_image=${kernel_image:="/vmlinuz"}
-initrd_image=${initrd_image:="/initrd"}
+initrd_image=${initrd_image:="/initrd.img"}
 stamp=${stamp:=""}
 
 
