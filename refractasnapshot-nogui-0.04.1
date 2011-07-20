@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# refractasnapshot-nogui-0.04.1 (20110719)
+# based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
+# borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
+# earlier version of this script. I'm losing track of who did what.
+# fsmithred@gmail.com (July 7, 2011)
+# License: GPL-3
+# This is free software with NO WARRANTY. Use at your own risk!
+
+# DESCRIPTION
+# This script makes a copy of your system with rsync and then creates
+# an iso file to be used as a live-cd. There are options in the config
+# file to change the location of the copy and the location of the final
+# iso file, in case there's not enough room on the system drive. Read
+# the config file for more options. (refractasnapshot.conf)
+
+# If you want to change any defaults, change them in the configfile.
+# Default is /etc/refractasnapshot.conf
+# If you want to use a different config file for testing, change this
+# variable. Normally, users should not edit anything in this script.
+configfile="/etc/refractasnapshot.conf"
+
+
+##### This can be removed from the final version
+if ! [[ -d /usr/local/lib/refractasnapshot/iso/live ]]; then
+	mkdir -p /usr/local/lib/refractasnapshot/iso/live
+fi
+
+
+refractasnapshot_configuration () {
+if [[ -f $configfile ]]; then
+    source $configfile
+fi
+# Check for values in $configfile and use them.
+# If any are unset, these defaults will be used.
+error_log=${error_log:="/var/log/refractasnapshot_errors.log"}
+work_dir=${work_dir:="/tmp/work"}
+snapshot_dir=${snapshot_dir:="/home/snapshot"}
+save_work=${save_work:="no"}
+snapshot_excludes=${snapshot_excludes:="/usr/local/lib/refractasnapshot/exclude.list"}
+kernel_image=${kernel_image:="/vmlinuz"}
+initrd_image=${initrd_image:="/initrd.img"}
+stamp=${stamp:=""}
+}
+
+refractasnapshot_configuration
+
+# Record errors in a logfile.
+exec 2>"$error_log"
+
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
+
+##### Add function check_exit?
+
+
+# Check and report disk space
+######## NOTE: This will be misleading if $save_work = "yes"
+disk_space=$(df -h | awk '/Filesystem/ { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/home" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/tmp" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;)
+
+
+# Issue a warning if /tmp is on a separate partition
+tmp_warning=$(df -h | awk '$6=="/tmp" { printf "\nWarning: /tmp is on a separate partition. You need free space equal to twice the system used space." }')
+
+
+# Check how many snapshots already exist and their total size
+snapshot_count=$(ls /home/snapshot | wc -l)
+snapshot_size=$(du -sh /home/snapshot | awk '{print $1}')
+if [[ -z $snapshot_size ]]; then
+    snapshot_size="0 bytes"
+fi
+
+
+# Check for saved copy of the system
+if [[ -d "$work_dir"/myfs ]]; then
+    saved_size=$(du -sh "$work_dir"/myfs | awk '{ print $1 }')
+    saved_copy=$(echo "You have a saved copy of the system using $saved_size of space
+ located at $work_dir/myfs.")
+fi
+
+
+# Check that work directories exist or create them.
+echo "Starting..."
+if [[ $save_work = "no" ]]; then
+    if [[ -d $work_dir ]]; then
+        rm -rf "$work_dir"
+    fi
+    mkdir -p "$work_dir"/iso
+    mkdir -p "$work_dir"/myfs
+elif [[ $save_work = "yes" ]]; then
+	if ! [[ -d $work_dir ]]; then
+	    mkdir -p "$work_dir"/iso
+        mkdir -p "$work_dir"/myfs
+    fi
+else
+    echo "\$save_work must be set to \"yes\" or \"no\"."
+    exit 1
+fi
+
+
+echo "
+ You have $snapshot_count snapshots taking up $snapshot_size of disk space.
+ $saved_copy
+ 
+ You will need plenty of free space. It is recommended that free space
+ (Avail) in the root partition (mounted on /) should be two times the 
+ total installed system size (Used). You can deduct the space taken up
+ by previous snapshots and any saved copies of the system from the Used
+ amount.
+ 
+ $tmp_warning
+
+ Current disk usage:
+
+ $disk_space
+ 
+ Press ENTER to proceed or hit ctrl-c to exit.  "
+    read -p " "
+
+
+cd "$work_dir"
+
+# Let iso/, vmlinuz and initrd.img get copied, even if work_dir was saved,
+# in case they have changed.
+echo "Copying the filesystem..."
+rsync -a /usr/local/lib/refractasnapshot/iso/ "$work_dir"/iso/
+cp "$kernel_image" "$work_dir"/iso/live/
+cp "$initrd_image" "$work_dir"/iso/live/
+
+rsync -a / myfs/ --delete --exclude="$work_dir" --exclude="$snapshot_dir" --exclude-from="$snapshot_excludes"
+
+echo "Squashing the filesystem..."
+mksquashfs myfs/ iso/live/filesystem.squashfs
+
+# This code is redundant, because $work_dir gets removed later, but
+# it might help by making more space on the hard drive for the iso.
+if [[ $save_work = "no" ]]; then
+    rm -rf myfs
+fi
+
+echo "Creating CD image file..."
+if ! [[ -d $snapshot_dir ]]; then
+    mkdir "$snapshot_dir"
+    chmod 777 "$snapshot_dir"
+fi
+
+# create the iso file and number it
+if [[ $stamp = "datetime" ]]; then
+    genisoimage -r -J -l -D -o "$snapshot_dir"/snapshot-$(date +%Y%m%d%H%M).iso -cache-inodes -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table iso/
+else
+    n=1
+    while [[ -f "$snapshot_dir"/snapshot$n.iso ]]; do
+        ((n++))
+    done
+    genisoimage -r -J -l -D -o "$snapshot_dir"/snapshot$n.iso -cache-inodes -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table iso/
+fi
+
+
+if [[ $save_work = "no" ]]; then
+    echo "Cleaning..."
+    cd /
+    rm -rf "$work_dir"
+else
+    rm iso/live/filesystem.squashfs
+fi
+
+echo "All finished!"
+
+exit 0
