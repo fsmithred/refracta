@@ -9,7 +9,8 @@
 
 show_switches () {
 switch=$(zenity --list --title="Services" \
-    --text="Start (restart) or stop services." \
+    --text="Start (restart) or stop services.
+Click on Cancel to Quit." \
     --checklist --column "Choose" --column "Num" --column "Option" \
      --width=520 --height=320  \
   FALSE 01 "Start SSH server" \
