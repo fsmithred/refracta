@@ -64,12 +64,6 @@ exec 2>"$error_log"
 [[ $(id -u) -eq 0 ]] || { zenity --title="Error" --error \
 --text="You need to be root\! \n\nCannot continue." ; exit 1 ; }
 
-##### Add function check_exit?
-check_exit () {
-[[ $? -eq 0 ]] || zenity --error --text="Exit due to error: $?
-See $error_log for details." &
-  exit 1
-}
 echo "____one"
 
 # First window shows general information
@@ -201,9 +195,6 @@ $disk_space
   FALSE 02 "Return to options window. (This only works once per run.)"\
   FALSE 03 "Exit")
 
-#if $(echo $answer | grep -q 01); then
-#	break
-#fi
 if $(echo $answer | grep -q 02); then
 	set_options
 fi
