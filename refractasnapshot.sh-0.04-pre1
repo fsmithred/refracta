@@ -185,10 +185,11 @@ answer=$(zenity --list --title="Report" \
      --text "You have $snapshot_count snapshots taking up $snapshot_size of disk space.
 $saved_copy
 
-You will need plenty of free space. It is recommended that free space in 
-the root partition (mounted on /) should be two times the total installed system size. 
-(Note: Any existing snapshots or saved copies of the filesystem will not be copied 
-to the current snapshot. Don\'t count these in the total for installed system size.)
+You will need plenty of free space. It is recommended that free space
+(Avail) in the root partition (mounted on /) should be two times the 
+total installed system size (Used). You can deduct the space taken up
+by previous snapshots and any saved copies of the system from the Used
+amount.
  
 $tmp_warning
 
