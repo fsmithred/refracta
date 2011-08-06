@@ -124,7 +124,7 @@ if [[ $install = "expert" ]]; then
 # Check that rsync excludes file exists, or create one.
     if ! [[ -f  $rsync_excludes ]] ; then
         zenity --question --ok-label=Continue --cancel-label=Exit \
-        --text="There is no rsync excludes file, or its name does not match what this script expects. You should let the script create one, or if you have a custom exlcudes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
+        --text="There is no rsync excludes file, or its name does not match what this script expects. You should let the script create one, or if you have a custom excludes file, and you know what you're doing, you can exit the script and edit the rsync_excludes variable at the top so that it matches the name and path of your custom file.
     
 If you have any other drives or partitions mounted that you don't want to be copied, unmount them or edit the rsync commands to add the -x option."
         if [[ $? = 0 ]] ; then
