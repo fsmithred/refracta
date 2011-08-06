@@ -35,7 +35,7 @@ if ! [[ -f  $rsync_excludes ]] ; then
     echo "
  There is no rsync excludes file, or its name does not match what
  this script expects. You should let the script create one, or if
- you have a custom exlcudes file, and you know what you're doing,
+ you have a custom excludes file, and you know what you're doing,
  you can exit the script and edit the rsync_excludes variable at 
  the top so that it matches the name and path of your custom file.
 
