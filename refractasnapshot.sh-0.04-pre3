@@ -147,7 +147,7 @@ echo "____three"
 report_space () {
 zenity --question --title="Report" --ok-label="Create Snapshot" \
      --cancel-label="Exit" --width=660 \
-     --text "You will need plenty of free space. It is recommended that free space (Avail) in the partition that holds the work directory (default is \"/\") should be two times the total installed system size (Used).
+     --text "You will need plenty of free space. It is recommended that free space (Avail) in the partition that holds the work directory (probably \"/\") should be two times the total installed system size (Used).
 You can deduct the space taken up by previous snapshots and any saved copies of the system from the Used amount.
 
 * You have $snapshot_count snapshots taking up $snapshot_size of disk space.
@@ -230,7 +230,7 @@ else
     while [[ -f "$snapshot_dir"/snapshot$n.iso ]]; do
         ((n++))
     done
-    genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
+    genisoimage -r -J -l -D -o "$snapshot_dir"/snapshot$n.iso -cache-inodes \
     -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
 
@@ -241,11 +241,10 @@ fi
 kill $(pgrep zenity)
 
 if [[ $save_work = "no" ]]; then
-    zenity --info --text="Cleaning..."
     cd /
-    rm -rf "$work_dir"
+    rm -rf "$work_dir" | tee >(zenity --title="Cleaning..." --progress --pulsate)
 else
-    rm iso/live/filesystem.squashfs
+    rm iso/live/filesystem.squashfs | tee >(zenity --title="Cleaning..." --progress --pulsate)
 fi
 kill $(pgrep zenity)
 
