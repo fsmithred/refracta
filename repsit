@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# repsit (20110410)
+# repsit (20110822)
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
@@ -14,7 +14,7 @@ flash_vid=(flashplugin-nonfree sun-java6-plugin)
 gnome_games=(gnome-games)
 file_share_win=(samba smbfs smbclient)
 file_share_lin=(nfs-kernel-server nfs-common)
-graphics=(gimp blender inkscape)
+graphics=(gimp imagemagick blender inkscape)
 module_comp=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
 kernel_comp=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
 nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
