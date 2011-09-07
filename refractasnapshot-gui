@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Snapshot 0.04-pre5 (20110811)"
+version="Refracta Snapshot 9.0.0 (20110811)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
