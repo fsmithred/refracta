@@ -1,0 +1,56 @@
+# rsync excludes file for refractasnapshot and refractasnapshot-nogui
+# version 9.0.0
+
+- dev/*
+- cdrom/*
+- media/*
+#/target   # this is for installer only
+- swapfile
+- mnt/*
+- sys/*
+- proc/*
+- tmp/*
+- live
+- boot/grub/grub.cfg
+- boot/grub/menu.lst
+- boot/grub/device.map
+- etc/udev/rules.d/70-persistent-cd.rules
+- etc/udev/rules.d/70-persistent-net.rules
+- etc/fstab
+- etc/mtab
+- home/snapshot
+- var/log/*
+- var/cache/apt/archives/*.deb
+- var/cache/apt/pkgcache.bin
+- var/cache/apt/srcpkgcache.bin
+- var/lib/apt/lists/*
+#- /boot/*-2.6.38-bpo.2-686   # uncomment to exclude squeeze-backports kernel
+
+
+# Entries below this can be edited by the user. If you have any large
+# files or directories, you should exclude them from being copied
+# by adding them to this list.
+
+- home/*/.mozilla/*/Cache/*
+- home/*/.adobe
+- home/*/.macromedia
+- home/*/.thumbnails/large/*
+- home/*/.thumbnails/normal/*
+- home/*/Trash/*
+- home/*/.cache
+- home/*/.gvfs
+- home/*/.bash_history
+- home/*/.recently-used
+- /home/*/.recently-used.xbel
+
+# Examples:
+#- /home/*/Downloads/*
+#- /home/*/Music/*
+#- /home/*/Pictures/*
+#- /home/*/Videos/*
+
+
+# To exclude all hidden files and directories in your home, uncomment
+# the next line. You will lose custom desktop configs if you do.
+#- /home/*/.[a-z,A-Z,0-9]*
+
