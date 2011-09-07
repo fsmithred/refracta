@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 version="refractainstaller 9.0.0"
 # Copyright 2011 fsmithred@gmail.com
-# Based on refractainstaller-8.0.3 by Dean Linkous
+# Based on refractainstaller-8.0.3 by Dean Linkous.
 # Licence: GPL-3
 # This is free software with no warrantees. Use at your own risk.
 
