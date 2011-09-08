@@ -263,11 +263,14 @@ kill $(pgrep zenity)
 
 # Burn the iso to CD if desired.
 if [[ type -p wodim ]]; then
-
+	iso_size=$(du -h "snapshot_dir"/"$filename" | awk '{ print $1 }')
 	burn_device=$(zenity --entry --title "Burn a CD now?"  --text "If you want to burn a CD now, put a blank CD in the drive
 	and enter the device name of the CD/DVD burner from the list below. 
 	(example: /dev/sdc0)
 	
+	 Image file:	$filename
+	 Size:			$iso_size
+
 	To exit now, hit Cancel.
 	
 	
