@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="refractasnapshot-9.0.1 (20110907)"
+version="refractasnapshot-9.0.1 (20110908)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
@@ -283,12 +283,16 @@ fi
 
 # Burn the iso to CD if desired.
 if [[ type -p wodim ]]; then
+	iso_size=$(du -h "snapshot_dir"/"$filename" | awk '{ print $1 }')
 	echo
 	wodim --devices
 	echo " 
 	 If you want to burn a CD now, put a blank CD in the drive,
 	 and enter the device name of your CD/DVD Burner.
 	 (example: /dev/scd0)
+	 
+	 Image file:	$filename
+	 Size:			$iso_size
 	
 	 To skip this and exit, jut hit ENTER without typing anything."
 	
