@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="refractasnapshot-9.0.1 (20110908)"
+version="refractasnapshot-9.0.1 (20110909)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
@@ -282,26 +282,36 @@ fi
 
 
 # Burn the iso to CD if desired.
-if [[ type -p wodim ]]; then
+if [[ $(type -p wodim) ]]; then
 	iso_size=$(du -h "snapshot_dir"/"$filename" | awk '{ print $1 }')
-	echo
+	echo "
+	Image file:	$filename
+	Size:			$iso_size
+	"
 	wodim --devices
 	echo " 
-	 If you want to burn a CD now, put a blank CD in the drive,
-	 and enter the device name of your CD/DVD Burner.
-	 (example: /dev/scd0)
+	If you want to burn a CD now, put a blank CD in the drive,
+	and enter the device name of your CD/DVD Burner.
+	(Example: /dev/scd0)
 	 
-	 Image file:	$filename
-	 Size:			$iso_size
-	
-	 To skip this and exit, jut hit ENTER without typing anything."
+	To skip this and exit, jut hit ENTER without typing anything."
 	
 	read burn_device
+	[[ -n $burn_device ]] || { echo "All finished!
+	" ; exit 0 ; }
 	[[ -b $burn_device ]] || { echo " Invalid device.
-	 Exiting..." ; exit 1 ; }
-	wodim dev=/dev/cdrw -v -eject speed="$burn_speed" "$snapshot_dir"/"$filename"
+	 Exiting...
+	 " ; exit 1 ; }
+
+	wodim dev="$burn_device" -v -eject driveropts=burnfree speed="$burn_speed" -data "$snapshot_dir"/"$filename"
+	echo "All finished!"
+	exit 0
 fi
 
-echo "All finished!"
+echo "All finished!
+
+(Note: If you had installed wodim, Refracta Snapshot
+would have burned the image to CD for you."
+ 
 
 exit 0
