@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Snapshot 9.0.0 (20110811)"
+version="Refracta Snapshot 9.0.1 (20110906)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
@@ -22,8 +22,8 @@ configfile="/etc/refractasnapshot.conf"
 
 
 ##### This can be removed from the final version
-if ! [[ -d /usr/local/lib/refractasnapshot/iso/live ]]; then
-	mkdir -p /usr/local/lib/refractasnapshot/iso/live
+if ! [[ -d /usr/lib/refractasnapshot/iso/live ]]; then
+	mkdir -p /usr/lib/refractasnapshot/iso/live
 fi
 
 
@@ -37,7 +37,7 @@ error_log=${error_log:="/var/log/refractasnapshot_errors.log"}
 work_dir=${work_dir:="/tmp/work"}
 snapshot_dir=${snapshot_dir:="/home/snapshot"}
 save_work=${save_work:="no"}
-snapshot_excludes=${snapshot_excludes:="/usr/local/lib/refractasnapshot/exclude.list"}
+snapshot_excludes=${snapshot_excludes:="/usr/lib/refractasnapshot/exclude.list"}
 kernel_image=${kernel_image:="/vmlinuz"}
 initrd_image=${initrd_image:="/initrd.img"}
 stamp=${stamp:=""}
@@ -51,9 +51,13 @@ refractasnapshot_configuration
 exec 2>"$error_log"
 
 
-# Check that user is root.
+# Check that xserver is running and user is root.
+[[ $DISPLAY ]] || { echo "There is no xserver running. Exiting..." ; exit 1 ; }
 [[ $(id -u) -eq 0 ]] || { zenity --title="Error" --error \
 --text="You need to be root\! \n\nCannot continue." ; exit 1 ; }
+
+
+ 
 
 
 # First window shows general information
@@ -186,7 +190,7 @@ cd "$work_dir"
 
 # Let iso/, vmlinuz and initrd.img get copied, even if work_dir was saved,
 # in case they have changed.
-rsync -a /usr/local/lib/refractasnapshot/iso/ "$work_dir"/iso/
+rsync -a /usr/lib/refractasnapshot/iso/ "$work_dir"/iso/
 cp "$kernel_image" "$work_dir"/iso/live/
 cp "$initrd_image" "$work_dir"/iso/live/
 
@@ -196,6 +200,12 @@ rsync -av / myfs/ --delete --exclude="$work_dir" \
  --exclude="$snapshot_dir" --exclude-from="$snapshot_excludes" \
  | tee >(zenity --title="Copying filesystem..." --progress --pulsate)
 kill $(pgrep zenity)
+
+
+# Disable updatedb for the live-CD
+if [[ -x "$work_dir"/myfs/usr/bin/updatedb.mlocate ]]; then
+	chmod -x "$work_dir"/myfs/usr/bin/updatedb.mlocate
+fi
 
 
 # Squash the filesystem copy
@@ -229,12 +239,14 @@ else
     while [[ -f "$snapshot_dir"/snapshot$n.iso ]]; do
         ((n++))
     done
-    genisoimage -r -J -l -D -o "$snapshot_dir"/snapshot$n.iso -cache-inodes \
+    filename=snapshot$n.iso
+    
+    genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
     -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
 
 	if [[ $make_md5sum = "yes" ]]; then
-		md5sum "$snapshot_dir"/snapshot$n.iso > "$snapshot_dir"/snapshot$n.iso.md5
+		md5sum "$snapshot_dir"/"$filename" > "$snapshot_dir"/"$filename".md5
 	fi
 fi
 kill $(pgrep zenity)
