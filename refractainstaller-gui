@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Installer 9.0.0"
+version="Refracta Installer 9.0.1 (20110906)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # License: GPL-3
@@ -52,7 +52,7 @@ error_log="/var/log/refracta_install_errors.log"
 exec 2>"$error_log"
 
 # Experts can change this to a custom file
-rsync_excludes="/usr/local/lib/refractainstaller/installer_exclude.list"
+rsync_excludes="/usr/lib/refractainstaller/installer_exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -95,7 +95,8 @@ EOF
 }
 
 
-# Check that user is root.
+# Check that xserver is running and user is root.
+[[ $DISPLAY ]] || { echo "There is no xserver running. Exiting..." ; exit 1 ; }
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
 
@@ -744,6 +745,10 @@ fi
 if [[ -f /target/usr/sbin/update-initramfs.debian ]] ; then
     cp /target/usr/sbin/update-initramfs.debian /target/usr/sbin/update-initramfs
 fi
+
+
+# Re-enable updatedb if it was disabled by snapshot
+[[ -x /target/usr/bin/updatedb.mlocate ]] || chmod +x /target/usr/bin/updatedb.mlocate
 
 
 # setup fstab
