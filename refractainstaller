@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-version="refractainstaller 9.0.0"
+version="refractainstaller 9.0.1 (20110906)"
 # Copyright 2011 fsmithred@gmail.com
-# Based on refractainstaller-8.0.3 by Dean Linkous.
+# Based on refractainstaller-8.0.3 by Dean Linkous
 # Licence: GPL-3
 # This is free software with no warrantees. Use at your own risk.
 
@@ -21,7 +21,10 @@ help_text="
 	Usage:  $0  [option]
 	
 	Run with no options to install a running live-CD or live-usb-hdd
-	to a hard drive. To use the gui version, run refractainstaller-gui
+	to a hard drive. 
+	
+	If you want to use the graphical version, run refractainstaller-gui
+	from a terminal or run Refracta Installer from the System menu.
 	
 	valid options:
 		-h, --help		show this help text
@@ -50,7 +53,7 @@ done
 error_log="/var/log/refractainstaller_error.log"
 exec 2>"$error_log"
 
-rsync_excludes="/usr/local/lib/refractainstaller/installer_exclude.list"
+rsync_excludes="/usr/lib/refractainstaller/installer_exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -141,6 +144,23 @@ while true; do
 				  [Nn]*) exit 0 ;;
 				esac
 			done
+		 elif ! [[ $DISPLAY ]]; then
+			while true; do
+				echo "
+ GParted requires a graphical environment.
+ Would you like to use cfdisk instead?
+				
+	Yes (use cfdisk)
+	No (exit the script)
+"
+				
+				read ans
+				case $ans in
+				  [Yy]*) cfdisk ; break ;;
+				  [Nn]*) exit 0 ;;
+				esac
+			done
+		 
 		 else
 			gparted
 		 fi
@@ -627,8 +647,12 @@ fi
 
 # create swap
 echo -e "\n Making a swap file...\n"
-dd if=/dev/zero of=/target/swapfile bs=1048 count=256000 ; check_exit 
+dd if=/dev/zero of=/target/swapfile bs=1024 count=262144 ; check_exit 
 mkswap /target/swapfile ; check_exit 
+
+
+# Re-enable updatedb if it was disabled by snapshot
+[[ -x /target/usr/bin/updatedb.mlocate ]] || chmod +x /target/usr/bin/updatedb.mlocate
 
 
 # copy the real update-initramfs back in place
@@ -689,14 +713,46 @@ if [[ -n $boot_dev ]] ; then
     chroot /target mount $boot_dev /boot
 fi
 
-chroot /target grub-install $grub_dev ; check_exit
+if [[ -n $grub_dev ]]; then
+    echo -e "\n Installing the boot loader...\n"
+    chroot /target grub-install $grub_dev ; check_exit
+fi
 
 # Run update-initramfs to include dm-mod if using encryption
 if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
     chroot /target update-initramfs -u
 fi
 
-chroot /target update-grub ; check_exit
+if [[ -n $grub_dev ]]; then
+    chroot /target update-grub ; check_exit 
+fi
+
+
+# Change/create root password
+while true; do
+	echo -n "
+ The root password is currently \"root\" and 
+ should be changed to something more secure.
+ 
+ Change root password? (I really shouldn't give you a choice here.)
+ (yes or no)
+"
+	read ans
+	case $ans in
+	  [Yy]*)
+        if [[ $? = 0 ]]; then
+#           # Redirect stderr from the error log to the screen, 
+#           # so we can see the prompts from passwd
+            exec 2>&1
+            echo "Change root passowrd"
+            chroot /target passwd
+#           # Resume logging errors in file
+            exec 2>>"$error_log"
+        fi 
+	    break ;;
+	  [Nn]*) break ;;
+	esac
+done
 
 
 # call cleanup function
@@ -705,5 +761,6 @@ cleanup
 echo "
     Done! You may now reboot into the new system.
     If you want to change the user name, then run
-    change_username.sh after reboot.
+    change-username after reboot.
     "
+exit 0
