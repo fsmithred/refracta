@@ -1,16 +1,15 @@
-# rsync excludes file for refractasnapshot and refractasnapshot-nogui
-# version 9.0.0
+# rsync excludes file for refractasnapshot and refractasnapshot-gui
+# version 9.0.1
 
 - dev/*
 - cdrom/*
 - media/*
-#/target   # this is for installer only
 - swapfile
 - mnt/*
 - sys/*
 - proc/*
 - tmp/*
-- live
+- /live
 - boot/grub/grub.cfg
 - boot/grub/menu.lst
 - boot/grub/device.map
@@ -19,12 +18,13 @@
 - etc/fstab
 - etc/mtab
 - home/snapshot
+- root/.bash_history
 - var/log/*
 - var/cache/apt/archives/*.deb
 - var/cache/apt/pkgcache.bin
 - var/cache/apt/srcpkgcache.bin
 - var/lib/apt/lists/*
-#- /boot/*-2.6.38-bpo.2-686   # uncomment to exclude squeeze-backports kernel
+#- boot/*-2.6.38-bpo.2-686   # uncomment to exclude squeeze-backports kernel
 
 
 # Entries below this can be edited by the user. If you have any large
@@ -36,21 +36,23 @@
 - home/*/.macromedia
 - home/*/.thumbnails/large/*
 - home/*/.thumbnails/normal/*
-- home/*/Trash/*
+- home/*/.Trash*
+- home/*/.local/share/Trash/*
 - home/*/.cache
 - home/*/.gvfs
 - home/*/.bash_history
 - home/*/.recently-used
-- /home/*/.recently-used.xbel
+- home/*/.recently-used.xbel
+- home/*/.xchat2
 
 # Examples:
-#- /home/*/Downloads/*
-#- /home/*/Music/*
-#- /home/*/Pictures/*
-#- /home/*/Videos/*
+#- home/user/Downloads/*
+#- home/*/Music/*
+#- home/user/Pictures/*
+#- home/*/Videos/*
 
 
 # To exclude all hidden files and directories in your home, uncomment
 # the next line. You will lose custom desktop configs if you do.
-#- /home/*/.[a-z,A-Z,0-9]*
+#- home/*/.[a-z,A-Z,0-9]*
 
