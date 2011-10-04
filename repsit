@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="repsit-0.7 (20110905)"
+version="repsit-0.7.2 (20111003)"
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
@@ -27,10 +27,11 @@ HP_printer=(hplip hplip-gui hpijs)
 word_processor=(abiword)
 spreadsheet=(gnumeric)
 office_suite=(openoffice.org)
-email_light=(sylpheed)
+email_light=(claws-mail)
 email_heavy=(icedove)
 file_share_win=(samba smbfs smbclient)
 file_share_lin=(nfs-kernel-server nfs-common)
+firmware_nonfree=(firmware-linux firmware-linux-nonfree)
 module_compile=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
 kernel_compile=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
 nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
@@ -56,7 +57,7 @@ To see all available software, install and use Synaptic, or use command-line too
   FALSE word_processor "AbiWord is a full-featured, efficient word processing application." \
   FALSE spreadsheet "Gnumeric spreadsheet application for GNOME" \
   FALSE office_suite "OpenOffice.org is a full-featured office productivity suite" \
-  FALSE email_light "Sylpheed is a light-weight email and news reader." \
+  FALSE email_light "Claws Mail is a lightweight and extensible email client." \
   FALSE email_heavy "Icedove is an unbranded Thunderbird mail client suitable for free distribution." \
   FALSE nvidia_driver "* proprietary nvidia graphics driver" \
   FALSE ati_driver "* proprietary ATI graphics driver (not yet implemented)" \
