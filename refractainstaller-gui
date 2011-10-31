@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Installer 9.0.1 (20110906)"
+version="Refracta Installer 9.0.2 (20111018)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # License: GPL-3
@@ -282,7 +282,7 @@ fi
 
 # Show the partition list in a menu, and choose one for /boot
 choose_boot () {
-boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+boot_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][1-9]*" \
   | sort | awk '{print "FALSE\n" $0 }' \
   | zenity --list --title="/boot partition" --text="Select a partition for /boot." \
  --radiolist --multiple --column ' ' --column 'Partitions' --height=380 --width=150)
@@ -323,7 +323,7 @@ fi
 
 # Show the partition list in a menu, and choose one for the OS
 choose_root () {
-install_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+install_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][1-9]*" \
   | sort | awk '{print "FALSE\n" $0 }' \
   | zenity --list --title="Root Partition" --text="Choose a partition to use for the installation of the operating system." \
 --radiolist --multiple --column ' ' --column 'Partitions' --height 380 --width 150)
@@ -387,7 +387,7 @@ fi
 
 # Show the partition list in a menu, and choose one for /home
 choose_home () {
-home_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][0-9]" \
+home_dev=$(find /dev -mindepth 1 -maxdepth 1  -name "*[sh]d[a-z][1-9]*" \
   | sort | awk '{print "FALSE\n" $0 }' \
   | zenity --list --title="/home partition" --text="Select a partition for /home" \
 --radiolist --multiple --column ' ' --column 'Partitions' --height=380 --width=150)
@@ -806,7 +806,8 @@ fi
 
 if [[ -n $grub_dev ]]; then
     echo -e "\n Installing the boot loader...\n"
-    chroot /target grub-install $grub_dev ; check_exit
+    echo -e "\n Installing the boot loader...\n" >> "$error_log"
+    chroot /target grub-install $grub_dev >> "$error_log" ; check_exit
 fi
 
 # Run update-initramfs to include dm-mod if using encryption
@@ -831,7 +832,7 @@ fi
 # Change the username
 if [[ $change_user = "yes" ]]; then
 	oldname=$(awk -F: '/1000:1000/ { print $1 }' /target/etc/passwd)
-	newname=$(zenity --entry --title="Change user name" --text="The primary user's current login name is $oldname. 
+	newname=$(zenity --entry --title="Change login name" --text="The primary user's current login name is $oldname. 
 Enter the new login name you want to use.")
 
 	echo "New user name is $newname"
@@ -843,15 +844,19 @@ Enter the new login name you want to use.")
 	for i in $(grep -r "/home/$oldname" /target/home/$newname/.config | awk -F":" '{ print $1 }'); do
 		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i"
 	done
+
+	for i in $(grep -r "/home/$oldname" /target/home/$newname/.local | awk -F":" '{ print $1 }'); do
+		sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i"
+	done
 fi
 
 #### Add user's real name in /etc/passwd (for Refracta)
 if [[ $change_user = "yes" ]]; then
-    refracta_live_user="$(awk -F: '{ print $5 }' /target/etc/passwd)"
-    if [[ $refracta_live_user = ",,," ]]; then
-        real_name=$(zenity --entry --title="Change user name" --text="Enter the user's real name.")
-        sed -i~ "s/$refracta_live_user/$real_name/" /target/etc/passwd
-    fi
+    live_user=$(awk -v pattern="$newname" -F: '$0 ~ pattern { print $5 }' /target/etc/passwd)
+    real_name=$(zenity --entry --title="Change real name" --text="The user's real name is currently $live_user.
+Enter the real name you want to use \(without 
+the trailing commas\).")
+    sed -i~ "s/$live_user/$real_name,,,/" /target/etc/passwd
 fi
 
 
