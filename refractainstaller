@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="refractainstaller 9.0.1 (20110906)"
+version="refractainstaller 9.0.2 (20111030)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # Licence: GPL-3
@@ -715,7 +715,7 @@ fi
 
 if [[ -n $grub_dev ]]; then
     echo -e "\n Installing the boot loader...\n"
-    chroot /target grub-install $grub_dev ; check_exit
+    chroot /target grub-install $grub_dev >> "$error_log"; check_exit
 fi
 
 # Run update-initramfs to include dm-mod if using encryption
