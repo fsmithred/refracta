@@ -114,11 +114,26 @@ echo "
   
 read -p  "    Press the ENTER key when you're ready to proceed."
 
-for i in $(grep -r "/home/$oldname" /home/$newname/.config | awk -F":" ' { print $1 }')
-do
+for i in $(grep -r "/home/$oldname" /home/$newname/.config | awk -F":" ' { print $1 }'); do
     sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i"
     check_exit
 done
+
+for i in $(grep -r "/home/$oldname" /home/$newname/.local | awk -F":" '{ print $1 }'); do
+	sed -i "s/\/home\/$oldname/\/home\/$newname/g" "$i"
+done
+
+
+# Change user's real name
+live_user=$(awk -v pattern="$newname" -F: '$0 ~ pattern { print $5 }' /etc/passwd)
+echo -n "
+ The user's real name is currently $live_user.
+ Enter the real name you want to use (without the trailing commas.)
+ "
+read real_name
+sed -i~ "s/$live_user/$real_name,,,/" /etc/passwd
+
+
 
 :<<HOLD
 # Edit /etc/gdm3/daemon.conf
