@@ -852,7 +852,7 @@ fi
 
 #### Add user's real name in /etc/passwd (for Refracta)
 if [[ $change_user = "yes" ]]; then
-    live_user=$(awk -v pattern="$newname" -F: '$0 ~ pattern { print $5 }' /target/etc/passwd)
+    live_user=$(awk -v pattern="1000:1000" -F: '$0 ~ pattern { print $5 }' /target/etc/passwd)
     real_name=$(zenity --entry --title="Change real name" --text="The user's real name is currently $live_user.
 Enter the real name you want to use \(without 
 the trailing commas\).")
