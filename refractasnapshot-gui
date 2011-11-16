@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Snapshot 9.0.1 (20110906)"
+version="Refracta Snapshot 9.0.2 (20111116)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
@@ -42,6 +42,7 @@ kernel_image=${kernel_image:="/vmlinuz"}
 initrd_image=${initrd_image:="/initrd.img"}
 stamp=${stamp:=""}
 make_md5sum=${make_md5sum:="yes"}
+make_isohybrid=${make_isohybrid:="yes"}
 }
 
 refractasnapshot_configuration
@@ -188,6 +189,11 @@ report_space
 cd "$work_dir"
 
 
+#copy some isolinux stuff from the system to the snapshot
+rsync -a /usr/lib/syslinux/isolinux.bin /usr/lib/refractasnapshot/iso/isolinux/
+rsync -a /usr/lib/syslinux/vesamenu.c32 /usr/lib/refractasnapshot/iso/isolinux/
+
+
 # Let iso/, vmlinuz and initrd.img get copied, even if work_dir was saved,
 # in case they have changed.
 rsync -a /usr/lib/refractasnapshot/iso/ "$work_dir"/iso/
@@ -230,9 +236,13 @@ if [[ $stamp = "datetime" ]]; then
     genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
     -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
+    
+    if [[ $make_isohybrid = "yes" ]]; then
+		isoyhbrid "$snapshot_dir"/"$filename"
+	fi
 
 	if [[ $make_md5sum = "yes" ]]; then
-		md5sum "$snapshot_dir"/$filename > "$snapshot_dir"/"$filename".md5
+		md5sum "$snapshot_dir"/"$filename" > "$snapshot_dir"/"$filename".md5
 	fi
 else
     n=1
@@ -244,6 +254,10 @@ else
     genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
     -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
+
+	if [[ $make_isohybrid = "yes" ]]; then
+		isoyhbrid "$snapshot_dir"/"$filename"
+	fi
 
 	if [[ $make_md5sum = "yes" ]]; then
 		md5sum "$snapshot_dir"/"$filename" > "$snapshot_dir"/"$filename".md5
