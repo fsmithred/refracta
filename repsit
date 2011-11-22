@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="repsit-0.7.2 (20111003)"
+version="repsit-0.7.3 (20111106)"
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
@@ -16,7 +16,9 @@ version="repsit-0.7.2 (20111003)"
 # zenity lists for installing and removing packages, and to the corresponding
 # if/then list below each. Note that a list can contain one or more packages. 
 Synaptic=(synaptic gdebi)
-flash_vid=(flashplugin-nonfree sun-java6-plugin)
+flash_vid=(flashplugin-nonfree)
+java_free=(icedtea6-plugin)
+java_nonfree=(sun-java6-plugin)
 gnome_games=(gnome-games)
 instant_message=(pidgin)
 cd_rip=(asunder)
@@ -48,7 +50,9 @@ To see all available software, install and use Synaptic, or use command-line too
   --column "Pick" --column "Package Group" --column "Description" \
   FALSE Synaptic "full-featured graphical package manager" \
   FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
-  FALSE flash_vid "* install Adobe flash and Sun Java browser plugins" \
+  FALSE flash_vid "* Adobe flash browser plugin" \
+  FALSE java_free "free openjava browser plugin (icedtea)" \
+  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
   FALSE gnome_games "popular games from the gnome desktop" \
   FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
   FALSE graphics "programs for creating, editing and scanning images." \
@@ -85,6 +89,14 @@ fi
 
 if $(echo $ans | grep -q flash_vid) ; then
     install_list=("${install_list[@]}"  "${flash_vid[@]}")
+fi
+
+if $(echo $ans | grep -q java_free) ; then
+    install_list=("${install_list[@]}"  "${java_free[@]}")
+fi
+
+if $(echo $ans | grep -q java_nonfree) ; then
+    install_list=("${install_list[@]}"  "${java_nonfree[@]}")
 fi
 
 if $(echo $ans | grep -q gnome_games) ; then
@@ -180,7 +192,9 @@ ans=$(zenity --list --title="Uninstall Menu" --text "Choose package groups to re
   --column "Pick" --column "Package Group" --column "Description" \
   FALSE Synaptic "full-featured graphical package manager" \
   FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
-  FALSE flash_vid "* install Adobe flash and Sun Java browser plugins" \
+  FALSE flash_vid "* Adobe flash browser plugin" \
+  FALSE java_free "free openjava browser plugin (icedtea)" \
+  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
   FALSE gnome_games "popular games from the gnome desktop" \
   FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
   FALSE graphics "programs for creating, editing and scanning images." \
@@ -217,6 +231,14 @@ fi
 
 if $(echo $ans | grep -q flash_vid) ; then
     remove_list=("${remove_list[@]}"  "${flash_vid[@]}")
+fi
+
+if $(echo $ans | grep -q java_free) ; then
+    remove_list=("${install_list[@]}"  "${java_free[@]}")
+fi
+
+if $(echo $ans | grep -q java_nonfree) ; then
+    remove_list=("${install_list[@]}"  "${java_nonfree[@]}")
 fi
 
 if $(echo $ans | grep -q gnome_games) ; then
