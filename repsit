@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="repsit-0.7.3 (20111106)"
+version="repsit-0.8.0 (20111226)"
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
@@ -15,7 +15,7 @@ version="repsit-0.7.3 (20111106)"
 # If you add a package list here, you must also add it to the
 # zenity lists for installing and removing packages, and to the corresponding
 # if/then list below each. Note that a list can contain one or more packages. 
-Synaptic=(synaptic gdebi)
+Synaptic=(synaptic gdebi update-manager-gnome)
 flash_vid=(flashplugin-nonfree)
 java_free=(icedtea6-plugin)
 java_nonfree=(sun-java6-plugin)
@@ -355,18 +355,6 @@ if $(echo $run_task | grep -q remove_software) ; then
 fi
 
 if $(echo $run_task | grep -q update) ; then
-    if [[ $(type -p update-manager) ]] ; then
-        update-manager
-    else
-        zenity --question  --ok-label=Yes --cancel-label=No --text="Update Manager is not installed. If you don't install it, you need to run the updates manually using aptitude or apt-get. In either case, you'll need to run this installer again.
-        
-Install update-manager-gnome now?"
-        if [[ $? = 0 ]] ; then
-            aptitude -y install update-manager-gnome | tee >(zenity --progress --pulsate)
-            exit 0
-        else
-            exit 0
-        fi
-    fi
+    aptitude update | tee >(zenity --progress --pulsate)
 fi
 
