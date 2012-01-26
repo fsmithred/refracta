@@ -273,7 +273,7 @@ else
     -boot-info-table iso/
 	
 	if [[ $make_isohybrid = "yes" ]]; then
-		isoyhbrid "$snapshot_dir"/"$filename"
+		isohybrid "$snapshot_dir"/"$filename"
 	fi
 	
 	if [[ $make_md5sum = "yes" ]]; then
