@@ -20,11 +20,12 @@ if $(echo $options | grep -q xx); then
     echo "Bye!"
     exit 0
 fi
+
 if $(echo $options | grep -q 01); then
-    dpkg-reconfigure keyboard-configuration
+   dbus-launch dpkg-reconfigure -f gnome keyboard-configuration
 fi
 if $(echo $options | grep -q 02); then
-    dpkg-reconfigure tzdata
+    dbus-launch dpkg-reconfigure -f gnome tzdata
 fi
 if $(echo $options | grep -q 03); then
     ntpdate-debian
