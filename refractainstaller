@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="refractainstaller 9.0.2 (20111030)"
+version="refractainstaller 9.0.2 (20120108)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # Licence: GPL-3
@@ -649,6 +649,10 @@ fi
 echo -e "\n Making a swap file...\n"
 dd if=/dev/zero of=/target/swapfile bs=1024 count=262144 ; check_exit 
 mkswap /target/swapfile ; check_exit 
+
+
+# Disallow mounting of all fixed drives with pmount
+sed -i 's:/dev/sd\[a-z\]:#/dev/sd\[a-z\]:' /target/etc/pmount.allow
 
 
 # Re-enable updatedb if it was disabled by snapshot
