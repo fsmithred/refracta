@@ -24,17 +24,24 @@
 - /home/snapshot
 - /root/.bash_history
 #- /var/log/*
-# The next two lines exclude everything in /var/log
-# except /var/log/clamav/ (or anything else beginning with "c").
+# The next three lines exclude everything in /var/log
+# except /var/log/clamav/ (or anything else beginning with "c") and
+# /var/log/gdm (or anything beginning with "g").
 # If clamav log files are excluded, freshclam will give errors at boot.
 - /var/log/[a-b,A-Z]*
-- /var/log/[d-z]*
+- /var/log/[d-f]*
+- /var/log/[h-z]*
 
 - /var/cache/apt/archives/*.deb
 - /var/cache/apt/pkgcache.bin
 - /var/cache/apt/srcpkgcache.bin
+- /var/cache/apt/apt-file/*
 - /var/lib/apt/lists/*
+- /var/lib/dhcp/*
+
 #- /boot/*-2.6.38-bpo.2-686   # uncomment to exclude squeeze-backports kernel
+#- /boot/*-2.6.39-bpo.2-686-pae   # uncomment to exclude squeeze-backports kernel
+#- /boot/*-2.6.39-bpo.2-amd64   # uncomment to exclude squeeze-backports kernel
 
 
 # Entries below this can be edited by the user. If you have any large
