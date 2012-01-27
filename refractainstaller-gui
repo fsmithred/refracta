@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Installer 9.0.2 (20111018)"
+version="Refracta Installer 9.0.2 (20120108)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # License: GPL-3
@@ -747,6 +747,10 @@ if [[ -f /target/usr/sbin/update-initramfs.debian ]] ; then
 fi
 
 
+# Disallow mounting of all fixed drives with pmount
+sed -i 's:/dev/sd\[a-z\]:#/dev/sd\[a-z\]:' /target/etc/pmount.allow
+
+
 # Re-enable updatedb if it was disabled by snapshot
 [[ -x /target/usr/bin/updatedb.mlocate ]] || chmod +x /target/usr/bin/updatedb.mlocate
 
@@ -852,7 +856,7 @@ fi
 
 #### Add user's real name in /etc/passwd (for Refracta)
 if [[ $change_user = "yes" ]]; then
-    live_user=$(awk -v pattern="1000:1000" -F: '$0 ~ pattern { print $5 }' /target/etc/passwd)
+    live_user=$(awk -v pattern="$newname" -F: '$0 ~ pattern { print $5 }' /target/etc/passwd)
     real_name=$(zenity --entry --title="Change real name" --text="The user's real name is currently $live_user.
 Enter the real name you want to use \(without 
 the trailing commas\).")
