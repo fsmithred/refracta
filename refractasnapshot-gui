@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="Refracta Snapshot 9.0.2 (20111116)"
+version="Refracta Snapshot 9.0.2 (20120114)"
 # based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
 # borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
 # earlier version of this script.
@@ -208,6 +208,10 @@ rsync -av / myfs/ --delete --exclude="$work_dir" \
 kill $(pgrep zenity)
 
 
+# Allow all fixed drives to be mounted with pmount
+sed -i 's:#/dev/sd\[a-z\]:/dev/sd\[a-z\]:' "$work_dir"/myfs/etc/pmount.allow
+
+
 # Disable updatedb for the live-CD
 if [[ -x "$work_dir"/myfs/usr/bin/updatedb.mlocate ]]; then
 	chmod -x "$work_dir"/myfs/usr/bin/updatedb.mlocate
@@ -238,7 +242,7 @@ if [[ $stamp = "datetime" ]]; then
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
     
     if [[ $make_isohybrid = "yes" ]]; then
-		isoyhbrid "$snapshot_dir"/"$filename"
+		isohybrid "$snapshot_dir"/"$filename"
 	fi
 
 	if [[ $make_md5sum = "yes" ]]; then
@@ -256,7 +260,7 @@ else
     -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
 
 	if [[ $make_isohybrid = "yes" ]]; then
-		isoyhbrid "$snapshot_dir"/"$filename"
+		isohybrid "$snapshot_dir"/"$filename"
 	fi
 
 	if [[ $make_md5sum = "yes" ]]; then
