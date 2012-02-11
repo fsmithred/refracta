@@ -123,7 +123,7 @@ echo "
  Running apt-get -u dselect-upgrade...
  " 
 sleep 1
-apt-get -u dselect-upgrade
+apt-get --no-install-recommends -u dselect-upgrade
 
 
 echo "
