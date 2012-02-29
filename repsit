@@ -1,63 +1,75 @@
 #!/usr/bin/env bash
-# repsit (20110410)
+version="repsit-0.8.0 (20111226)"
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
 
+# Refracta Extra Package Selection and Installation Tool (repsit)
+#
+# Removed this from functions because it requires debian-multimedia
+#  FALSE dvd_set "* software for watching dvd movies" \
+
+
 # define some package lists.
+#
 # If you add a package list here, you must also add it to the
-# zenity list around line 50 and to the if/then list below that.
-# Note that a list can contain one or more packages. 
-Synaptic=(synaptic gdebi)
-dvd_set=(libdvdcss2 libdvdnav4 libdvdread4)
-flash_vid=(flashplugin-nonfree sun-java6-plugin)
+# zenity lists for installing and removing packages, and to the corresponding
+# if/then list below each. Note that a list can contain one or more packages. 
+Synaptic=(synaptic gdebi update-manager-gnome)
+flash_vid=(flashplugin-nonfree)
+java_free=(icedtea6-plugin)
+java_nonfree=(sun-java6-plugin)
 gnome_games=(gnome-games)
+instant_message=(pidgin)
+cd_rip=(asunder)
+# dvd_set=(libdvdcss2 libdvdnav4 libdvdread4) # disabled and removed from menu
+graphics=(gimp imagemagick inkscape xsane)
+animation=(blender)
+HP_printer=(hplip hplip-gui hpijs)
+word_processor=(abiword)
+spreadsheet=(gnumeric)
+office_suite=(openoffice.org)
+email_light=(claws-mail)
+email_heavy=(icedove)
 file_share_win=(samba smbfs smbclient)
 file_share_lin=(nfs-kernel-server nfs-common)
-graphics=(gimp blender inkscape)
-module_comp=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
-kernel_comp=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
+firmware_nonfree=(firmware-linux firmware-linux-nonfree)
+module_compile=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
+kernel_compile=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
 nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
+ati_driver=()
 
 
-# Check that user is root.
-[[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
+# Long function to install package groups
+install_packages () {
+ans=$(zenity --list --title="Installation Menu" --text "Choose package groups to install. This list contains a few common package groups and some preferred software.
+To see all available software, install and use Synaptic, or use command-line tools (aptitude, apt-get, apt-cache, apt-file.) 
 
-
-zenity --question  --ok-label=OK --cancel-label="Skip update" \
-  --text="Before installing new software, the system should be updated. If you haven't done this recently (i.e. in the last 24 hours) you should click OK to proceed. 
-  
-Click OK to proceed, or Cancel to skip the update." 
-
-if [[ $? = 0 ]] ; then
-    if [[ $(type -p update-manager) ]] ; then
-        update-manager
-    else
-        zenity --question  --ok-label=Yes --cancel-label=No --text="Update Manager is not installed. If you don't install it, you need to run the updates manually. In either case, you'll need to run this installer again.
-        
-Install update-manager-gnome now?"
-        if [[ $? = 0 ]] ; then
-            aptitude -y install update-manager-gnome | tee >(zenity --progress --pulsate)
-            exit 0
-        else
-            exit 0
-        fi
-    fi
-fi
-
-ans=$(zenity --list --title="Installation Menu" --text "Choose package groups to install" --checklist \
-  --ok-label=OK --cancel-label=Exit --width=520 --height=320  \
+* Items marked with a star are from non-libre repositories; they may be closed-source and/or may come with a restrictive license." --checklist \
+  --ok-label=OK --cancel-label=Exit --width=520 --height=360 \
   --column "Pick" --column "Package Group" --column "Description" \
   FALSE Synaptic "full-featured graphical package manager" \
-  FALSE dvd_set "software to watch dvd movies" \
-  FALSE flash_vid "install Adobe flash and Sun Java browser plugins" \
+  FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
+  FALSE flash_vid "* Adobe flash browser plugin" \
+  FALSE java_free "free openjava browser plugin (icedtea)" \
+  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
   FALSE gnome_games "popular games from the gnome desktop" \
+  FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
+  FALSE graphics "programs for creating, editing and scanning images." \
+  FALSE animation "3d suite for modelling, animation, rendering, etc" \
+  FALSE HP_printer "HP printer and scanner drivers and setup tools" \
+  FALSE word_processor "AbiWord is a full-featured, efficient word processing application." \
+  FALSE spreadsheet "Gnumeric spreadsheet application for GNOME" \
+  FALSE office_suite "OpenOffice.org is a full-featured office productivity suite" \
+  FALSE email_light "Claws Mail is a lightweight and extensible email client." \
+  FALSE email_heavy "Icedove is an unbranded Thunderbird mail client suitable for free distribution." \
+  FALSE nvidia_driver "* proprietary nvidia graphics driver" \
+  FALSE ati_driver "* proprietary ATI graphics driver (not yet implemented)" \
   FALSE file_share_win "share files with windows computers (smb)" \
   FALSE file_share_lin "share files with linux computers (nfs)" \
-  FALSE graphics "programs for editing pictures and movies" \
-  FALSE nvidia_driver "proprietary nvidia graphics driver" \
-  FALSE module_comp "gcc, make, headers, module-assistant" \
-  FALSE kernel_comp "programs needed for compiling the linux kernel" )
+  FALSE firmware_nonfree "* Binary firmware for various drivers in the Linux kernel" \
+  FALSE module_compile "gcc, make, linux-headers, module-assistant" \
+  FALSE kernel_compile "programs needed for compiling the linux kernel" )
 echo "$ans"
 
 
@@ -70,33 +82,92 @@ fi
 if $(echo $ans | grep -q Synaptic) ; then
     install_list=("${install_list[@]}"  "${Synaptic[@]}")
 fi
-if $(echo $ans | grep -q dvd_set) ; then
-    install_list=("${install_list[@]}"  "${dvd_set[@]}")
+
+if $(echo $ans | grep -q instant_message) ; then
+    install_list=("${install_list[@]}"  "${instant_message[@]}")
 fi
+
 if $(echo $ans | grep -q flash_vid) ; then
     install_list=("${install_list[@]}"  "${flash_vid[@]}")
 fi
+
+if $(echo $ans | grep -q java_free) ; then
+    install_list=("${install_list[@]}"  "${java_free[@]}")
+fi
+
+if $(echo $ans | grep -q java_nonfree) ; then
+    install_list=("${install_list[@]}"  "${java_nonfree[@]}")
+fi
+
 if $(echo $ans | grep -q gnome_games) ; then
     install_list=("${install_list[@]}"  "${gnome_games[@]}")
 fi
-if $(echo $ans | grep -q file_share_win) ; then
-    install_list=("${install_list[@]}"  "${file_share_win[@]}")
+
+if $(echo $ans | grep -q cd_rip) ; then
+    install_list=("${install_list[@]}"  "${cd_rip[@]}")
 fi
-if $(echo $ans | grep -q file_share_lin) ; then
-    install_list=("${install_list[@]}"  "${file_share_lin[@]}")
-fi
+
+#if $(echo $ans | grep -q dvd_set) ; then
+#    install_list=("${install_list[@]}"  "${dvd_set[@]}")
+#fi
+
 if $(echo $ans | grep -q graphics) ; then
     install_list=("${install_list[@]}"  "${graphics[@]}")
 fi
-if $(echo $ans | grep -q module_comp) ; then
-    install_list=("${install_list[@]}"  "${module_comp[@]}")
+
+if $(echo $ans | grep -q animation) ; then
+    install_list=("${install_list[@]}"  "${animation[@]}")
 fi
-if $(echo $ans | grep -q kernel_comp) ; then
-    install_list=("${install_list[@]}"  "${kernel_comp[@]}")
+
+if $(echo $ans | grep -q HP_printer) ; then
+    install_list=("${install_list[@]}"  "${HP_printer[@]}")
 fi
+
+if $(echo $ans | grep -q word_processor) ; then
+    install_list=("${install_list[@]}"  "${word_processor[@]}")
+fi
+
+if $(echo $ans | grep -q spreadsheet) ; then
+    install_list=("${install_list[@]}"  "${spreadsheet[@]}")
+fi
+
+if $(echo $ans | grep -q office_suite) ; then
+    install_list=("${install_list[@]}"  "${office_suite[@]}")
+fi
+
+if $(echo $ans | grep -q email_light) ; then
+    install_list=("${install_list[@]}"  "${email_light[@]}")
+fi
+
+if $(echo $ans | grep -q email_heavy) ; then
+    install_list=("${install_list[@]}"  "${email_heavy[@]}")
+fi
+
 if $(echo $ans | grep -q nvidia_driver) ; then
     install_list=("${install_list[@]}"  "${nvidia_driver[@]}")
 fi
+
+if $(echo $ans | grep -q file_share_win) ; then
+    install_list=("${install_list[@]}"  "${file_share_win[@]}")
+fi
+
+if $(echo $ans | grep -q file_share_lin) ; then
+    install_list=("${install_list[@]}"  "${file_share_lin[@]}")
+fi
+
+if $(echo $ans | grep -q firmware_nonfree) ; then
+    install_list=("${install_list[@]}"  "${firmware_nonfree[@]}")
+fi
+
+if $(echo $ans | grep -q module_compile) ; then
+    install_list=("${install_list[@]}"  "${module_comp[@]}")
+fi
+
+if $(echo $ans | grep -q kernel_compile) ; then
+    install_list=("${install_list[@]}"  "${kernel_comp[@]}")
+fi
+
+
 
 echo "${install_list[@]}"
 
@@ -109,3 +180,181 @@ else
 fi
 
 exit 0
+}
+
+
+# Long function to remove (purge) package groups
+remove_packages () {
+ans=$(zenity --list --title="Uninstall Menu" --text "Choose package groups to remove/purge. 
+
+* Items marked with a star are from non-libre repositories; they may be closed-source and/or may come with a restrictive license." --checklist \
+  --ok-label=OK --cancel-label=Exit --width=520 --height=360 \
+  --column "Pick" --column "Package Group" --column "Description" \
+  FALSE Synaptic "full-featured graphical package manager" \
+  FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
+  FALSE flash_vid "* Adobe flash browser plugin" \
+  FALSE java_free "free openjava browser plugin (icedtea)" \
+  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
+  FALSE gnome_games "popular games from the gnome desktop" \
+  FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
+  FALSE graphics "programs for creating, editing and scanning images." \
+  FALSE animation "3d suite for modelling, animation, rendering, etc" \
+  FALSE HP_printer "HP printer and scanner drivers and setup tools" \
+  FALSE word_processor "AbiWord is a full-featured, efficient word processing application." \
+  FALSE spreadsheet "Gnumeric spreadsheet application for GNOME" \
+  FALSE office_suite "OpenOffice.org is a full-featured office productivity suite" \
+  FALSE email_light "Sylpheed is a light-weight email and news reader." \
+  FALSE email_heavy "Icedove is an unbranded Thunderbird mail client suitable for free distribution." \
+  FALSE nvidia_driver "* proprietary nvidia graphics driver" \
+  FALSE ati_driver "* proprietary ATI graphics driver (not yet implemented)" \
+  FALSE file_share_win "share files with windows computers (smb)" \
+  FALSE file_share_lin "share files with linux computers (nfs)" \
+  FALSE firmware_nonfree "* Binary firmware for various drivers in the Linux kernel" \
+  FALSE module_compile "gcc, make, linux-headers, module-assistant" \
+  FALSE kernel_compile "programs needed for compiling the linux kernel" )
+echo "$ans"
+
+
+# this needs to be here in case the list is cancelled or ok'd with no selections.
+if [[ -z $ans ]]; then
+    exit 0
+fi
+
+# Put all selected package lists into an install list.
+if $(echo $ans | grep -q Synaptic) ; then
+    remove_list=("${remove_list[@]}"  "${Synaptic[@]}")
+fi
+
+if $(echo $ans | grep -q instant_message) ; then
+    remove_list=("${remove_list[@]}"  "${instant_message[@]}")
+fi
+
+if $(echo $ans | grep -q flash_vid) ; then
+    remove_list=("${remove_list[@]}"  "${flash_vid[@]}")
+fi
+
+if $(echo $ans | grep -q java_free) ; then
+    remove_list=("${install_list[@]}"  "${java_free[@]}")
+fi
+
+if $(echo $ans | grep -q java_nonfree) ; then
+    remove_list=("${install_list[@]}"  "${java_nonfree[@]}")
+fi
+
+if $(echo $ans | grep -q gnome_games) ; then
+    remove_list=("${remove_list[@]}"  "${gnome_games[@]}")
+fi
+
+if $(echo $ans | grep -q cd_rip) ; then
+    remove_list=("${remove_list[@]}"  "${cd_rip[@]}")
+fi
+
+#if $(echo $ans | grep -q dvd_set) ; then
+#    remove_list=("${remove_list[@]}"  "${dvd_set[@]}")
+#fi
+
+if $(echo $ans | grep -q graphics) ; then
+    remove_list=("${remove_list[@]}"  "${graphics[@]}")
+fi
+
+if $(echo $ans | grep -q animation) ; then
+    remove_list=("${remove_list[@]}"  "${animation[@]}")
+fi
+
+if $(echo $ans | grep -q HP_printer) ; then
+    remove_list=("${remove_list[@]}"  "${HP_printer[@]}")
+fi
+
+if $(echo $ans | grep -q word_processor) ; then
+    remove_list=("${remove_list[@]}"  "${word_processor[@]}")
+fi
+
+if $(echo $ans | grep -q spreadsheet) ; then
+    remove_list=("${remove_list[@]}"  "${spreadsheet[@]}")
+fi
+
+if $(echo $ans | grep -q office_suite) ; then
+    remove_list=("${remove_list[@]}"  "${office_suite[@]}")
+fi
+
+if $(echo $ans | grep -q email_light) ; then
+    remove_list=("${remove_list[@]}"  "${email_light[@]}")
+fi
+
+if $(echo $ans | grep -q email_heavy) ; then
+    remove_list=("${remove_list[@]}"  "${email_heavy[@]}")
+fi
+
+if $(echo $ans | grep -q nvidia_driver) ; then
+    remove_list=("${remove_list[@]}"  "${nvidia_driver[@]}")
+fi
+
+if $(echo $ans | grep -q file_share_win) ; then
+    remove_list=("${remove_list[@]}"  "${file_share_win[@]}")
+fi
+
+if $(echo $ans | grep -q file_share_lin) ; then
+    remove_list=("${remove_list[@]}"  "${file_share_lin[@]}")
+fi
+
+if $(echo $ans | grep -q firmware_nonfree) ; then
+    remove_list=("${remove_list[@]}"  "${firmware_nonfree[@]}")
+fi
+
+if $(echo $ans | grep -q module_compile) ; then
+    remove_list=("${remove_list[@]}"  "${module_comp[@]}")
+fi
+
+if $(echo $ans | grep -q kernel_compile) ; then
+    remove_list=("${remove_list[@]}"  "${kernel_comp[@]}")
+fi
+
+
+
+echo "${remove_list[@]}"
+
+zenity --question --text="$(aptitude -s purge ${remove_list[@]} &)"
+if [[ $? = 0 ]] ; then
+    aptitude -y purge ${remove_list[@]}  | tee >(zenity --progress --pulsate)
+else
+    echo "You said no."
+    exit 0
+fi
+
+exit 0
+}
+
+
+#
+# The action starts here...
+#
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
+
+
+# Choose update, install or remove software
+run_task=$(zenity --list --title="$version" \
+  --ok-label=OK --cancel-label=Exit --width=320 --height=270 --radiolist \
+  --text="Before installing new software, the system should be updated. If you 
+haven't done this recently (i.e. in the last 24 hours) you should run the update now.
+Otherwise, you can choose to install or remove software
+
+Click OK to proceed, or Cancel to exit the program." \
+  --column "Choose Task" --column "Description" \
+  TRUE  	update \
+  FALSE 	install_software \
+  FALSE 	remove_software )
+
+if $(echo $run_task | grep -q install_software) ; then
+	install_packages
+fi
+
+if $(echo $run_task | grep -q remove_software) ; then
+	remove_packages
+fi
+
+if $(echo $run_task | grep -q update) ; then
+    aptitude update | tee >(zenity --progress --pulsate)
+fi
+

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# refractainstaller-nogui.sh (20110410)
+version="refractainstaller 9.0.2 (20120108)"
 # Copyright 2011 fsmithred@gmail.com
+# Based on refractainstaller-8.0.3 by Dean Linkous
 # Licence: GPL-3
 # This is free software with no warrantees. Use at your own risk.
 
@@ -11,11 +12,48 @@
 # NOTE: If you try to tee this to an install log, you won't see it
 # when cryptsetup asks you to confirm with YES.
 
+show_help () {
+	printf "$help_text"
+	exit 0
+}
 
-error_log="/var/log/refracta_install_errors.log"
+help_text="
+	Usage:  $0  [option]
+	
+	Run with no options to install a running live-CD or live-usb-hdd
+	to a hard drive. 
+	
+	If you want to use the graphical version, run refractainstaller-gui
+	from a terminal or run Refracta Installer from the System menu.
+	
+	valid options:
+		-h, --help		show this help text
+		-v, --version	display the version information
+
+"
+
+while [[ $1 == -* ]]; do
+	case "$1" in
+	
+		-h|--help)
+			show_help ;;
+		
+		-v|--version)
+			printf "\n$version\n\n" 
+			exit 0 ;;
+		
+		*) 
+			printf "\t invalid option: $1 \n\n"
+			printf "\t Try:  $0 -h for full help. \n\n"
+			exit 1 ;;
+    esac
+done		
+
+
+error_log="/var/log/refractainstaller_error.log"
 exec 2>"$error_log"
 
-rsync_excludes="./exclude.list"
+rsync_excludes="/usr/lib/refractainstaller/installer_exclude.list"
 
 # function to exit the script if there are errors
 check_exit () {
@@ -30,18 +68,20 @@ check_exit () {
 # Check that user is root.
 [[ $(id -u) -eq 0 ]] || { echo -e "\t You need to be root!\n" ; exit 1 ; }
 
+
+
 # Check that rsync excludes file exists, or create one.
 if ! [[ -f  $rsync_excludes ]] ; then
     echo "
  There is no rsync excludes file, or its name does not match what
  this script expects. You should let the script create one, or if
- you have a custom exlcudes file, and you know what you're doing,
+ you have a custom excludes file, and you know what you're doing,
  you can exit the script and edit the rsync_excludes variable at 
  the top so that it matches the name and path of your custom file.
 
  Press ENTER to proceed or hit ctrl-c to exit. "
     read -p " "
-    rsync_excludes="./exclude.list"
+    rsync_excludes="$(pwd)/installer_exclude.list"
     echo " Creating rsync excludes file, $rsync_excludes
  "
     sleep 2
@@ -89,7 +129,42 @@ while true; do
     "
     read ans
     case $ans in
-      1) gparted ; break ;;
+      1) if ! [[ -f /usr/sbin/gparted ]]; then
+			while true; do
+				echo "
+ GParted is not installed. Would you like to use cfdisk instead?
+				
+	Yes (use cfdisk)
+	No (exit the script)
+"
+				
+				read ans
+				case $ans in
+				  [Yy]*) cfdisk ; break ;;
+				  [Nn]*) exit 0 ;;
+				esac
+			done
+		 elif ! [[ $DISPLAY ]]; then
+			while true; do
+				echo "
+ GParted requires a graphical environment.
+ Would you like to use cfdisk instead?
+				
+	Yes (use cfdisk)
+	No (exit the script)
+"
+				
+				read ans
+				case $ans in
+				  [Yy]*) cfdisk ; break ;;
+				  [Nn]*) exit 0 ;;
+				esac
+			done
+		 
+		 else
+			gparted
+		 fi
+		 break ;;
       2) cfdisk ; break ;;
       3) break ;;
       4) exit 0 ;;
@@ -572,8 +647,16 @@ fi
 
 # create swap
 echo -e "\n Making a swap file...\n"
-dd if=/dev/zero of=/target/swapfile bs=1048 count=256000 ; check_exit 
+dd if=/dev/zero of=/target/swapfile bs=1024 count=262144 ; check_exit 
 mkswap /target/swapfile ; check_exit 
+
+
+# Disallow mounting of all fixed drives with pmount
+sed -i 's:/dev/sd\[a-z\]:#/dev/sd\[a-z\]:' /target/etc/pmount.allow
+
+
+# Re-enable updatedb if it was disabled by snapshot
+[[ -x /target/usr/bin/updatedb.mlocate ]] || chmod +x /target/usr/bin/updatedb.mlocate
 
 
 # copy the real update-initramfs back in place
@@ -634,14 +717,46 @@ if [[ -n $boot_dev ]] ; then
     chroot /target mount $boot_dev /boot
 fi
 
-chroot /target grub-install $grub_dev ; check_exit
+if [[ -n $grub_dev ]]; then
+    echo -e "\n Installing the boot loader...\n"
+    chroot /target grub-install $grub_dev >> "$error_log"; check_exit
+fi
 
 # Run update-initramfs to include dm-mod if using encryption
 if [[ $encrypt_os = yes ]] || [[ $encrypt_home = yes ]] ; then
     chroot /target update-initramfs -u
 fi
 
-chroot /target update-grub ; check_exit
+if [[ -n $grub_dev ]]; then
+    chroot /target update-grub ; check_exit 
+fi
+
+
+# Change/create root password
+while true; do
+	echo -n "
+ The root password is currently \"root\" and 
+ should be changed to something more secure.
+ 
+ Change root password? (I really shouldn't give you a choice here.)
+ (yes or no)
+"
+	read ans
+	case $ans in
+	  [Yy]*)
+        if [[ $? = 0 ]]; then
+#           # Redirect stderr from the error log to the screen, 
+#           # so we can see the prompts from passwd
+            exec 2>&1
+            echo "Change root passowrd"
+            chroot /target passwd
+#           # Resume logging errors in file
+            exec 2>>"$error_log"
+        fi 
+	    break ;;
+	  [Nn]*) break ;;
+	esac
+done
 
 
 # call cleanup function
@@ -650,5 +765,6 @@ cleanup
 echo "
     Done! You may now reboot into the new system.
     If you want to change the user name, then run
-    change_username.sh after reboot.
+    change-username after reboot.
     "
+exit 0

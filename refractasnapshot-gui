@@ -1,0 +1,285 @@
+#!/usr/bin/env bash
+version="Refracta Snapshot 9.0.2 (20120114)"
+# based primarily on refractasnapshot-8.0.4 by Dean Linkous with ideas
+# borrowed from dzsnapshot-gui.sh by David Hare, which was based on an
+# earlier version of this script.
+# fsmithred@gmail.com (August 2011)
+# License: GPL-3
+# This is free software with NO WARRANTY. Use at your own risk!
+
+# DESCRIPTION
+# This script makes a copy of your system with rsync and then creates
+# an iso file to be used as a live-cd. There are options in the config
+# file to change the location of the copy and the location of the final
+# iso file, in case there's not enough room on the system drive. Read
+# the config file for more options. (refractasnapshot.conf)
+
+# If you want to change any defaults, change them in the configfile.
+# Default is /etc/refractasnapshot.conf
+# If you want to use a different config file for testing, change this
+# variable. Normally, users should not edit anything in this script.
+configfile="/etc/refractasnapshot.conf"
+
+
+##### This can be removed from the final version
+if ! [[ -d /usr/lib/refractasnapshot/iso/live ]]; then
+	mkdir -p /usr/lib/refractasnapshot/iso/live
+fi
+
+
+refractasnapshot_configuration () {
+if [[ -f $configfile ]]; then
+    source $configfile
+fi
+# Check for values in $configfile and use them.
+# If any are unset, these defaults will be used.
+error_log=${error_log:="/var/log/refractasnapshot_errors.log"}
+work_dir=${work_dir:="/tmp/work"}
+snapshot_dir=${snapshot_dir:="/home/snapshot"}
+save_work=${save_work:="no"}
+snapshot_excludes=${snapshot_excludes:="/usr/lib/refractasnapshot/exclude.list"}
+kernel_image=${kernel_image:="/vmlinuz"}
+initrd_image=${initrd_image:="/initrd.img"}
+stamp=${stamp:=""}
+make_md5sum=${make_md5sum:="yes"}
+make_isohybrid=${make_isohybrid:="yes"}
+}
+
+refractasnapshot_configuration
+
+
+# Record errors in a logfile.
+exec 2>"$error_log"
+
+
+# Check that xserver is running and user is root.
+[[ $DISPLAY ]] || { echo "There is no xserver running. Exiting..." ; exit 1 ; }
+[[ $(id -u) -eq 0 ]] || { zenity --title="Error" --error \
+--text="You need to be root\! \n\nCannot continue." ; exit 1 ; }
+
+
+ 
+
+
+# First window shows general information
+zenity --question --title="$version" --ok-label="Next" --cancel-label="Exit" \
+ --width 580 --text "Are you ready to create a live installable snapshot of your system? This utility will create a bootable image that you can burn to CD. The image will be stored in $snapshot_dir.
+
+This is free software that comes with no warranty or guarantee of any type, including but not limited to express, implied, merchantability or fitness of purpose.
+Copyright 2011 fsmithred@gmail.com, portions copyright 2009, 2010 Dean Linkous.
+"
+if [ $? -ne 0 ]; then
+    exit 0
+fi
+
+
+# Function to check for old snapshots and filesystem copy
+check_copies () {
+# Check how many snapshots already exist and their total size
+if [[ -d $snapshot_dir ]]; then
+	snapshot_count=$(ls "$snapshot_dir"/*.iso | wc -l)
+	snapshot_size=$(du -sh "$snapshot_dir" | awk '{print $1}')
+	if [[ -z $snapshot_size ]]; then
+		snapshot_size="0 bytes"
+	fi
+else
+	snapshot_count="0"
+	snapshot_size="0 bytes"
+fi
+
+# Check for saved copy of the system
+if [[ -d "$work_dir"/myfs ]]; then
+    saved_size=$(du -sh "$work_dir"/myfs | awk '{ print $1 }')
+    saved_copy=$(echo "* You have a saved copy of the system using $saved_size of space
+  located at $work_dir/myfs.")
+fi
+
+
+# Create a message to say whether the filesystem copy will be saved or not.
+if [[ $save_work = "yes" ]]; then
+	save_message=$(echo "* The temporary copy of the filesystem will be saved 
+at $work_dir/myfs.")
+else
+	save_message=$(echo "* The temporary copy of the filesystem will be created 
+at $work_dir/myfs and removed when this program finishes.")
+fi
+}
+
+
+# Create snapshot_dir and work_dir if necessary.
+check_directories () {
+
+# Check that snapshot_dir exists
+if ! [[ -d $snapshot_dir ]]; then
+	mkdir -p "$snapshot_dir"
+	chmod 777 "$snapshot_dir"
+fi
+
+
+# Check that work directories exist or create them.
+if [[ $save_work = "no" ]]; then
+    if [[ -d $work_dir ]]; then
+        rm -rf "$work_dir"
+    fi
+    mkdir -p "$work_dir"/iso
+    mkdir -p "$work_dir"/myfs
+elif [[ $save_work = "yes" ]]; then
+	if ! [[ -d $work_dir ]]; then
+	    mkdir -p "$work_dir"/iso
+        mkdir -p "$work_dir"/myfs
+    fi
+fi
+}
+
+
+# Check disk space on mounted /, /home, /media, /mnt, /tmp
+check_space () {
+
+disk_space=$(df -h | awk '/Filesystem/ { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/home" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6~"/mnt" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6~"/media" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+# Next line is useful only if you have an encrypted volume mounted at non-standard location.
+#df -h | awk '$1~"/dev/mapper" { print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;
+df -h | awk '$6=="/tmp" { print $1 "\t " $2 "\t" $3 "\t" $4 "\t" $5 "  " $6 }' ;)
+
+
+# Create a warning message if /tmp is on a separate partition
+tmp_warning=$(df -h | awk '$6=="/tmp" { printf "\nWarning: /tmp is on a separate partition. Make sure it has enough free space or use a different location to copy the filesystem." }')
+}
+
+
+# Put information in a zenity window to show current settings and disk space 
+report_space () {
+zenity --question --title="Disk Space and Settings Report" --ok-label="Create Snapshot" \
+     --cancel-label="Exit" --width 600 \
+     --text "You will need plenty of free space. It is recommended that free space (Avail) in the partition that holds the work directory (probably \"/\") should be two times the total installed system size (Used).
+You can deduct the space taken up by previous snapshots and any saved copies of the system from the Used amount.
+
+* You have $snapshot_count snapshots taking up $snapshot_size of disk space.
+$saved_copy
+$save_message
+* The snapshot directory is currently set to $snapshot_dir
+$tmp_warning
+
+You can change these and other settings by editing 
+$configfile.
+
+
+Current disk usage:
+(For complete listing, exit and run 'df -h')
+
+$disk_space
+"
+if [ $? -ne 0 ]; then
+    exit 0
+fi
+}
+
+# These functions create the second window
+
+check_copies
+check_directories
+check_space
+report_space
+
+
+# The real work starts here
+cd "$work_dir"
+
+
+#copy some isolinux stuff from the system to the snapshot
+rsync -a /usr/lib/syslinux/isolinux.bin /usr/lib/refractasnapshot/iso/isolinux/
+rsync -a /usr/lib/syslinux/vesamenu.c32 /usr/lib/refractasnapshot/iso/isolinux/
+
+
+# Let iso/, vmlinuz and initrd.img get copied, even if work_dir was saved,
+# in case they have changed.
+rsync -a /usr/lib/refractasnapshot/iso/ "$work_dir"/iso/
+cp "$kernel_image" "$work_dir"/iso/live/
+cp "$initrd_image" "$work_dir"/iso/live/
+
+
+# Copy the filesystem
+rsync -av / myfs/ --delete --exclude="$work_dir" \
+ --exclude="$snapshot_dir" --exclude-from="$snapshot_excludes" \
+ | tee >(zenity --title="Copying filesystem..." --progress --pulsate)
+kill $(pgrep zenity)
+
+
+# Allow all fixed drives to be mounted with pmount
+sed -i 's:#/dev/sd\[a-z\]:/dev/sd\[a-z\]:' "$work_dir"/myfs/etc/pmount.allow
+
+
+# Disable updatedb for the live-CD
+if [[ -x "$work_dir"/myfs/usr/bin/updatedb.mlocate ]]; then
+	chmod -x "$work_dir"/myfs/usr/bin/updatedb.mlocate
+fi
+
+
+# Squash the filesystem copy
+mksquashfs myfs/ iso/live/filesystem.squashfs \
+ | tee >(zenity --title="Squashing filesystem..." --progress --pulsate)
+kill $(pgrep zenity)
+
+
+# This code is redundant, because $work_dir gets removed later, but
+# it might help by making more space on the hard drive for the iso.
+if [[ $save_work = "no" ]]; then
+    rm -rf myfs
+fi
+
+
+# create the iso file, put either a number or date/time in the filename
+# create md5sum file for the iso
+if [[ $stamp = "datetime" ]]; then
+    # use this variable so iso and md5 have same time stamp
+	filename=snapshot-$(date +%Y%m%d_%H%M).iso
+
+    genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
+    -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
+    -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
+    
+    if [[ $make_isohybrid = "yes" ]]; then
+		isohybrid "$snapshot_dir"/"$filename"
+	fi
+
+	if [[ $make_md5sum = "yes" ]]; then
+		md5sum "$snapshot_dir"/"$filename" > "$snapshot_dir"/"$filename".md5
+	fi
+else
+    n=1
+    while [[ -f "$snapshot_dir"/snapshot$n.iso ]]; do
+        ((n++))
+    done
+    filename=snapshot$n.iso
+    
+    genisoimage -r -J -l -D -o "$snapshot_dir"/"$filename" -cache-inodes \
+    -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 \
+    -boot-info-table iso/ | tee >(zenity --title="Creating CD image file..." --progress --pulsate)
+
+	if [[ $make_isohybrid = "yes" ]]; then
+		isohybrid "$snapshot_dir"/"$filename"
+	fi
+
+	if [[ $make_md5sum = "yes" ]]; then
+		md5sum "$snapshot_dir"/"$filename" > "$snapshot_dir"/"$filename".md5
+	fi
+fi
+kill $(pgrep zenity)
+
+
+# Cleanup
+if [[ $save_work = "no" ]]; then
+    cd /
+    rm -rf "$work_dir" | tee >(zenity --title="Cleaning..." --progress --pulsate)
+else
+    rm iso/live/filesystem.squashfs | tee >(zenity --title="Cleaning..." --progress --pulsate)
+fi
+kill $(pgrep zenity)
+
+
+zenity --info --text="All finished!"
+
+exit 0
