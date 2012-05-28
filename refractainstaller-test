@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version="refractainstaller 9.0.3 (20120527)"
+version="refractainstaller 9.0.3 (20120528)"
 # Copyright 2011 fsmithred@gmail.com
 # Based on refractainstaller-8.0.3 by Dean Linkous
 # Licence: GPL-3
@@ -641,13 +641,13 @@ rsync -av / /target/ --exclude-from="$rsync_excludes" --exclude=/home/*/.gvfs
 # copy separate /home if needed
 if [[ -n $home_part ]] ; then
     echo -e "\n Copying home folders to new partition...\n"
-    rsync -av /home/ /target_home/ --exclude=/home/*/.gvfs
+    rsync -av /home/ /target_home/ --exclude-from="$rsync_excludes" --exclude=/home/*/.gvfs
 fi
 
 # copy separate /boot if needed
 if [[ -n $boot_dev ]] ; then
     echo -e "\n Copying files to boot partitions...\n"
-    rsync -av /boot/ /target_boot/
+    rsync -av /boot/ /target_boot/ --exclude-from="$rsync_excludes"
 fi
 
 # create swap
@@ -679,7 +679,7 @@ fi
 #
 if [[ $use_uuid = yes ]]; then
 	if [[ $encrypt_os = no ]]; then
-		install_part="UUID=$(blkid $install_dev | awk -F"\"" '{ print $2 }')"
+		install_part="$(blkid $install_dev | awk '{ print $2 }')"
 	fi
 fi
 echo -e "\n Creating /etc/fstab...\n"
@@ -692,7 +692,7 @@ check_exit
 if [[ -n $home_part ]] ; then
 	if [[ $use_uuid = yes ]]; then
 		if [[ $encrypt_home = no ]]; then
-			home_part="UUID=$(blkid $home_dev | awk -F"\"" '{ print $2 }')"
+			home_part="$(blkid $home_dev | awk '{ print $2 }')"
 		fi
 	fi
     echo -e "\n Adding /home entry to fstab...\n"
@@ -703,7 +703,7 @@ fi
 # add entry for /boot to fstab if needed
 if [[ -n $boot_dev ]] ; then
 	if [[ $use_uuid = yes ]]; then
-		boot_part="UUID=$(blkid $boot_dev | awk -F"\"" '{ print $2 }')"
+		boot_part="$(blkid $boot_dev | awk '{ print $2 }')"
 	else
 		boot_part="$boot_dev"
 	fi
@@ -716,7 +716,7 @@ fi
 # Add entry for root filesystem to crypttab if needed
 if [[ $encrypt_os = yes ]] ; then
 	if [[ $use_uuid = yes ]]; then
-		encrypt_install_dev="UUID=$(blkid $install_dev | awk -F"\"" '{ print $2 }')"
+		encrypt_install_dev="$(blkid $install_dev | awk '{ print $2 }')"
   else
 		encrypt_install_dev="$install_dev"
 	fi
@@ -727,7 +727,7 @@ fi
 # Add entry for /home to crypttab if needed
 if [[ $encrypt_home = yes ]] ; then
 	if [[ $use_uuid = yes ]]; then
-		encrypt_home_dev="UUID=$(blkid $home_dev | awk -F"\"" '{ print $2 }')"
+		encrypt_home_dev="$(blkid $home_dev | awk '{ print $2 }')"
 	else
 		encrypt_home_dev="$home_dev"
 	fi
