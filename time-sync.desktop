@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Time (sync with network time server)
+Comment=Synchronize time with a network time server.
+Exec=gksu  /usr/local/bin/time-sync
+Terminal=false
+Type=Application
+Icon=system
+Categories=System;
+
