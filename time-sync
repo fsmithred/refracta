@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# time-sync
+
+
+# Check that xserver is running
+[[ $DISPLAY ]] || { echo "There is no xserver running. Exiting..." ; exit 1 ; }
+
+
+# if yad is installed, use in preference
+if [[ -f /usr/bin/yad ]]; then
+
+	DIALOG="yad"
+	INFO="image=gtk-dialog-info"
+	QUESTION="image=gtk-dialog-question"
+	WARNING="image=gtk-dialog-warning"
+	ERROR="image=gtk-dialog-error"
+	
+	#buttons
+	BUTTON0="button"
+	BUTTON1="button"
+	BUTTON0NUM=":0"
+	BUTTON1NUM=":1"
+
+#cancel button always returns 1 as $?
+#ok button always returns 0 as $?
+#ok is default (highlighted)
+#buttons in yad dialog window may show reversed from zenity window, e.g.
+#yad: ok -- cancel (0 -- 1)
+#zenity: cancel -- ok (1 -- 0)
+
+elif [[ -f /usr/bin/zenity ]]; then
+
+	# use zenity
+	
+	DIALOG="zenity"
+	INFO="info"
+	QUESTION="question"
+	WARNING="warning"
+	ERROR="error"
+	
+	#buttons
+	BUTTON0="ok-label"
+	BUTTON1="cancel-label"
+	BUTTON0NUM=""
+	BUTTON1NUM=""
+
+else
+
+	xterm -fa monaco -fs 12 -hold -e echo "
+  Neither Yad nor Zenity is installed. You can't run this script.
+  Instead, you can run 'ntpdate-debian' from a root terminal.
+"
+fi
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { $DIALOG --title=Error --$ERROR \
+  --text="You need to be root\! \n\nCannot continue." ; exit 1 ; }
+
+
+ntpdate-debian | $DIALOG --text-info --title="Sychronizing with time server...   Please wait." --width 570
+
+exit 0
+
