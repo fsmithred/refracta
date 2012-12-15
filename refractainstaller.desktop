@@ -1,9 +1,0 @@
-[Desktop Entry]
-Encoding=UTF-8
-Name=Refracta Installer
-Comment= Install from a live CD to your system.
-Exec=gksu 'xfce4-terminal -e /usr/bin/refractainstaller-gui'
-Terminal=false
-Type=Application
-Icon=system
-Categories=GNOME;GTK;System;
