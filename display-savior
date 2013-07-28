@@ -58,6 +58,10 @@ if ps -C xinit; then
   dm_status="no"
   kill $(ps -C xinit -opid=)
 elif
+  ps -C lightdm; then
+  dm_status="yes"
+  dm="lightdm"
+elif
   ps -C gdm; then
   dm_status="yes"
   dm="gdm"

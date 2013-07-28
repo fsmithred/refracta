@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-version="repsit-0.8.0 (20111226)"
+version="repsit_2013mar31"
 # copyright 2011 fsmithred@gmail.com
 # License: GPL-3
 
 
 # Refracta Extra Package Selection and Installation Tool (repsit)
-#
-# Removed this from functions because it requires debian-multimedia
-#  FALSE dvd_set "* software for watching dvd movies" \
 
 
 # define some package lists.
@@ -15,29 +12,38 @@ version="repsit-0.8.0 (20111226)"
 # If you add a package list here, you must also add it to the
 # zenity lists for installing and removing packages, and to the corresponding
 # if/then list below each. Note that a list can contain one or more packages. 
-Synaptic=(synaptic gdebi update-manager-gnome)
-flash_vid=(flashplugin-nonfree)
-java_free=(icedtea6-plugin)
-java_nonfree=(sun-java6-plugin)
-gnome_games=(gnome-games)
-instant_message=(pidgin)
-cd_rip=(asunder)
-# dvd_set=(libdvdcss2 libdvdnav4 libdvdread4) # disabled and removed from menu
-graphics=(gimp imagemagick inkscape xsane)
-animation=(blender)
-HP_printer=(hplip hplip-gui hpijs)
-word_processor=(abiword)
-spreadsheet=(gnumeric)
-office_suite=(openoffice.org)
-email_light=(claws-mail)
-email_heavy=(icedove)
-file_share_win=(samba smbfs smbclient)
-file_share_lin=(nfs-kernel-server nfs-common)
-firmware_nonfree=(firmware-linux firmware-linux-nonfree)
-module_compile=(build-essential gcc-4.3 linux-headers-2.6.32-5-686 module-assistant)
-kernel_compile=(kernel-package ncurses-dev module-init-tools initramfs-tools procps fakeroot zlib1g-dev)
-nvidia_driver=(nvidia-glx nvidia-settings nvidia-xconfig)
-ati_driver=()
+deja_dup=(deja-dup)
+mc=(mc mc-data)
+gdmap=(gdmap)
+tilda=(tilda)
+gimp=(gimp gimp-data)
+xsane=(xsane xsane-common)
+evince=(evince evince-common)
+gftp=(gftp gftp-common)
+transmission=(transmission-gtk transmission transmission-common)
+zenmap=(zenmap)
+xchat=(xchat xchat-common)
+vnc=(x11vnc libvncserver0 xtightvncviewer)
+asunder=(asunder)
+brasero=(brasero brasero-common)
+gnome_mplayer=(gnome-mplayer gecko-mediaplayer)
+winff=(winff)
+alsamixergui=(alsamixergui)
+abiword=(abiword abiword-common)
+gnumeric=(gnumeric gnumeric-common)
+galternatives=(galternatives)
+bleachbit=(bleachbit)
+gdebi=(gdebi)
+gkdebconf=(gkdebconf)
+htop=(htop)
+hardinfo=(hardinfo)
+gnome_system_tools=(gnome-system-tools system-tools-backends)
+clamav=(clamav clamav-freshclam libclamav6)
+xscreensaver=(xscreensaver-data xscreensaver)
+virtualbox=(virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11)
+cups=(cups-common cups-bsd cups-client cups-ppdc cups-filters cups)
+gthumb=(gthumb-data gthumb)
+
 
 
 # Long function to install package groups
@@ -45,128 +51,173 @@ install_packages () {
 ans=$(zenity --list --title="Installation Menu" --text "Choose package groups to install. This list contains a few common package groups and some preferred software.
 To see all available software, install and use Synaptic, or use command-line tools (aptitude, apt-get, apt-cache, apt-file.) 
 
-* Items marked with a star are from non-libre repositories; they may be closed-source and/or may come with a restrictive license." --checklist \
-  --ok-label=OK --cancel-label=Exit --width=520 --height=360 \
+" --checklist \
+  --ok-label=OK --cancel-label=Cancel --width=520 --height=360 \
   --column "Pick" --column "Package Group" --column "Description" \
-  FALSE Synaptic "full-featured graphical package manager" \
-  FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
-  FALSE flash_vid "* Adobe flash browser plugin" \
-  FALSE java_free "free openjava browser plugin (icedtea)" \
-  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
-  FALSE gnome_games "popular games from the gnome desktop" \
-  FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
-  FALSE graphics "programs for creating, editing and scanning images." \
-  FALSE animation "3d suite for modelling, animation, rendering, etc" \
-  FALSE HP_printer "HP printer and scanner drivers and setup tools" \
-  FALSE word_processor "AbiWord is a full-featured, efficient word processing application." \
-  FALSE spreadsheet "Gnumeric spreadsheet application for GNOME" \
-  FALSE office_suite "OpenOffice.org is a full-featured office productivity suite" \
-  FALSE email_light "Claws Mail is a lightweight and extensible email client." \
-  FALSE email_heavy "Icedove is an unbranded Thunderbird mail client suitable for free distribution." \
-  FALSE nvidia_driver "* proprietary nvidia graphics driver" \
-  FALSE ati_driver "* proprietary ATI graphics driver (not yet implemented)" \
-  FALSE file_share_win "share files with windows computers (smb)" \
-  FALSE file_share_lin "share files with linux computers (nfs)" \
-  FALSE firmware_nonfree "* Binary firmware for various drivers in the Linux kernel" \
-  FALSE module_compile "gcc, make, linux-headers, module-assistant" \
-  FALSE kernel_compile "programs needed for compiling the linux kernel" )
+	FALSE abiword "efficient, featureful word processor " \
+	FALSE alsamixergui "graphical soundcard mixer " \
+	FALSE asunder "graphical audio CD ripper and encoder " \
+	FALSE bleachbit "delete unnecessary files from the system " \
+	FALSE brasero "CD/DVD burning application for GNOME " \
+	FALSE clamav "anti-virus utility for Unix " \
+	FALSE cups "Common UNIX Printing System " \
+	FALSE deja_dup "Backup utility " \
+	FALSE evince "Document (PostScript, PDF) viewer " \
+	FALSE galternatives "graphical setup tool for the alternatives system " \
+	FALSE gdebi "simple tool to install deb files " \
+	FALSE gdmap "Tool to visualize diskspace " \
+	FALSE gftp "X/GTK+ and console FTP client " \
+	FALSE gimp "The GNU Image Manipulation Program " \
+	FALSE gkdebconf "Helper to reconfigure packages with Debconf " \
+	FALSE gnome_mplayer "GTK+ interface for MPlayer " \
+	FALSE gnome_system_tools "Cross-platform configuration utilities for GNOME " \
+	FALSE gnumeric "spreadsheet application for GNOME " \
+	FALSE gthumb "image viewer and browser " \
+	FALSE hardinfo "Displays system information " \
+	FALSE htop "interactive processes viewer " \
+	FALSE mc "Midnight Commander - a powerful file manager " \
+	FALSE tilda "terminal emulator with first person shooter console likeness " \
+	FALSE transmission "lightweight BitTorrent client " \
+	FALSE virtualbox "x86 virtualization solution " \
+	FALSE vnc "Virtual network computing software " \
+	FALSE winff "graphical video and audio batch converter using ffmpeg " \
+	FALSE xchat "IRC client for X similar to AmIRC " \
+	FALSE xsane "featureful graphical frontend for SANE " \
+	FALSE xscreensaver "Automatic screensaver for X " \
+	FALSE zenmap "The Network Mapper Front End " )
 echo "$ans"
 
 
 # this needs to be here in case the list is cancelled or ok'd with no selections.
 if [[ -z $ans ]]; then
-    exit 0
+    choose_task
+    return
 fi
 
 # Put all selected package lists into an install list.
-if $(echo $ans | grep -q Synaptic) ; then
-    install_list=("${install_list[@]}"  "${Synaptic[@]}")
+if $(echo $ans | grep -q deja_dup) ; then
+    install_list=("${install_list[@]}"  "${deja_dup[@]}")
 fi
 
-if $(echo $ans | grep -q instant_message) ; then
-    install_list=("${install_list[@]}"  "${instant_message[@]}")
+if $(echo $ans | grep -q mc) ; then
+    install_list=("${install_list[@]}"  "${mc[@]}")
 fi
 
-if $(echo $ans | grep -q flash_vid) ; then
-    install_list=("${install_list[@]}"  "${flash_vid[@]}")
+if $(echo $ans | grep -q gdmap) ; then
+    install_list=("${install_list[@]}"  "${gdmap[@]}")
 fi
 
-if $(echo $ans | grep -q java_free) ; then
-    install_list=("${install_list[@]}"  "${java_free[@]}")
+if $(echo $ans | grep -q tilda) ; then
+    install_list=("${install_list[@]}"  "${tilda[@]}")
 fi
 
-if $(echo $ans | grep -q java_nonfree) ; then
-    install_list=("${install_list[@]}"  "${java_nonfree[@]}")
+if $(echo $ans | grep -q gimp) ; then
+    install_list=("${install_list[@]}"  "${gimp[@]}")
 fi
 
-if $(echo $ans | grep -q gnome_games) ; then
-    install_list=("${install_list[@]}"  "${gnome_games[@]}")
+if $(echo $ans | grep -q xsane) ; then
+    install_list=("${install_list[@]}"  "${xsane[@]}")
 fi
 
-if $(echo $ans | grep -q cd_rip) ; then
-    install_list=("${install_list[@]}"  "${cd_rip[@]}")
+if $(echo $ans | grep -q evince) ; then
+    install_list=("${install_list[@]}"  "${evince[@]}")
 fi
 
-#if $(echo $ans | grep -q dvd_set) ; then
-#    install_list=("${install_list[@]}"  "${dvd_set[@]}")
-#fi
-
-if $(echo $ans | grep -q graphics) ; then
-    install_list=("${install_list[@]}"  "${graphics[@]}")
+if $(echo $ans | grep -q gftp) ; then
+    install_list=("${install_list[@]}"  "${gftp[@]}")
 fi
 
-if $(echo $ans | grep -q animation) ; then
-    install_list=("${install_list[@]}"  "${animation[@]}")
+if $(echo $ans | grep -q transmission) ; then
+    install_list=("${install_list[@]}"  "${transmission[@]}")
 fi
 
-if $(echo $ans | grep -q HP_printer) ; then
-    install_list=("${install_list[@]}"  "${HP_printer[@]}")
+if $(echo $ans | grep -q zenmap) ; then
+    install_list=("${install_list[@]}"  "${zenmap[@]}")
 fi
 
-if $(echo $ans | grep -q word_processor) ; then
-    install_list=("${install_list[@]}"  "${word_processor[@]}")
+if $(echo $ans | grep -q xchat) ; then
+    install_list=("${install_list[@]}"  "${xchat[@]}")
 fi
 
-if $(echo $ans | grep -q spreadsheet) ; then
-    install_list=("${install_list[@]}"  "${spreadsheet[@]}")
+if $(echo $ans | grep -q vnc) ; then
+    install_list=("${install_list[@]}"  "${vnc[@]}")
 fi
 
-if $(echo $ans | grep -q office_suite) ; then
-    install_list=("${install_list[@]}"  "${office_suite[@]}")
+if $(echo $ans | grep -q asunder) ; then
+    install_list=("${install_list[@]}"  "${asunder[@]}")
 fi
 
-if $(echo $ans | grep -q email_light) ; then
-    install_list=("${install_list[@]}"  "${email_light[@]}")
+if $(echo $ans | grep -q brasero) ; then
+    install_list=("${install_list[@]}"  "${brasero[@]}")
 fi
 
-if $(echo $ans | grep -q email_heavy) ; then
-    install_list=("${install_list[@]}"  "${email_heavy[@]}")
+if $(echo $ans | grep -q gnome_mplayer) ; then
+    install_list=("${install_list[@]}"  "${gnome_mplayer[@]}")
 fi
 
-if $(echo $ans | grep -q nvidia_driver) ; then
-    install_list=("${install_list[@]}"  "${nvidia_driver[@]}")
+if $(echo $ans | grep -q winff) ; then
+    install_list=("${install_list[@]}"  "${winff[@]}")
 fi
 
-if $(echo $ans | grep -q file_share_win) ; then
-    install_list=("${install_list[@]}"  "${file_share_win[@]}")
+if $(echo $ans | grep -q alsamixergui) ; then
+    install_list=("${install_list[@]}"  "${alsamixergui[@]}")
 fi
 
-if $(echo $ans | grep -q file_share_lin) ; then
-    install_list=("${install_list[@]}"  "${file_share_lin[@]}")
+if $(echo $ans | grep -q abiword) ; then
+    install_list=("${install_list[@]}"  "${abiword[@]}")
 fi
 
-if $(echo $ans | grep -q firmware_nonfree) ; then
-    install_list=("${install_list[@]}"  "${firmware_nonfree[@]}")
+if $(echo $ans | grep -q gnumeric) ; then
+    install_list=("${install_list[@]}"  "${gnumeric[@]}")
 fi
 
-if $(echo $ans | grep -q module_compile) ; then
-    install_list=("${install_list[@]}"  "${module_comp[@]}")
+if $(echo $ans | grep -q galternatives) ; then
+    install_list=("${install_list[@]}"  "${galternatives[@]}")
 fi
 
-if $(echo $ans | grep -q kernel_compile) ; then
-    install_list=("${install_list[@]}"  "${kernel_comp[@]}")
+if $(echo $ans | grep -q bleachbit) ; then
+    install_list=("${install_list[@]}"  "${bleachbit[@]}")
 fi
 
+if $(echo $ans | grep -q gdebi) ; then
+    install_list=("${install_list[@]}"  "${gdebi[@]}")
+fi
+
+if $(echo $ans | grep -q gkdebconf) ; then
+    install_list=("${install_list[@]}"  "${gkdebconf[@]}")
+fi
+
+if $(echo $ans | grep -q htop) ; then
+    install_list=("${install_list[@]}"  "${htop[@]}")
+fi
+
+if $(echo $ans | grep -q hardinfo) ; then
+    install_list=("${install_list[@]}"  "${hardinfo[@]}")
+fi
+
+if $(echo $ans | grep -q gnome_system_tools) ; then
+    install_list=("${install_list[@]}"  "${gnome_system_tools[@]}")
+fi
+
+if $(echo $ans | grep -q clamav) ; then
+    install_list=("${install_list[@]}"  "${clamav[@]}")
+fi
+
+if $(echo $ans | grep -q xscreensaver) ; then
+    install_list=("${install_list[@]}"  "${xscreensaver[@]}")
+fi
+
+if $(echo $ans | grep -q virtualbox) ; then
+    install_list=("${install_list[@]}"  "${virtualbox[@]}")
+fi
+
+if $(echo $ans | grep -q cups) ; then
+    install_list=("${install_list[@]}"  "${cups[@]}")
+fi
+
+if $(echo $ans | grep -q gthumb) ; then
+    install_list=("${install_list[@]}"  "${gthumb[@]}")
+fi
 
 
 echo "${install_list[@]}"
@@ -174,12 +225,10 @@ echo "${install_list[@]}"
 zenity --question --text="$(aptitude -s install ${install_list[@]} &)"
 if [[ $? = 0 ]] ; then
     aptitude -y install ${install_list[@]}  | tee >(zenity --progress --pulsate)
-else
-    echo "You said no."
-    exit 0
+    kill $(pgrep zenity)
 fi
 
-exit 0
+choose_task
 }
 
 
@@ -187,128 +236,173 @@ exit 0
 remove_packages () {
 ans=$(zenity --list --title="Uninstall Menu" --text "Choose package groups to remove/purge. 
 
-* Items marked with a star are from non-libre repositories; they may be closed-source and/or may come with a restrictive license." --checklist \
-  --ok-label=OK --cancel-label=Exit --width=520 --height=360 \
+" --checklist \
+  --ok-label=OK --cancel-label=Cancel --width=520 --height=360 \
   --column "Pick" --column "Package Group" --column "Description" \
-  FALSE Synaptic "full-featured graphical package manager" \
-  FALSE instant_message "AIM/ICQ, Yahoo!, MSN, IRC, Jabber/XMPP/Google Talk, and more with Pidgin." \
-  FALSE flash_vid "* Adobe flash browser plugin" \
-  FALSE java_free "free openjava browser plugin (icedtea)" \
-  FALSE java_nonfree "* Sun (Oracle) java browser plugin" \
-  FALSE gnome_games "popular games from the gnome desktop" \
-  FALSE cd_rip "Asunder is a graphical Audio CD ripper and encoder." \
-  FALSE graphics "programs for creating, editing and scanning images." \
-  FALSE animation "3d suite for modelling, animation, rendering, etc" \
-  FALSE HP_printer "HP printer and scanner drivers and setup tools" \
-  FALSE word_processor "AbiWord is a full-featured, efficient word processing application." \
-  FALSE spreadsheet "Gnumeric spreadsheet application for GNOME" \
-  FALSE office_suite "OpenOffice.org is a full-featured office productivity suite" \
-  FALSE email_light "Sylpheed is a light-weight email and news reader." \
-  FALSE email_heavy "Icedove is an unbranded Thunderbird mail client suitable for free distribution." \
-  FALSE nvidia_driver "* proprietary nvidia graphics driver" \
-  FALSE ati_driver "* proprietary ATI graphics driver (not yet implemented)" \
-  FALSE file_share_win "share files with windows computers (smb)" \
-  FALSE file_share_lin "share files with linux computers (nfs)" \
-  FALSE firmware_nonfree "* Binary firmware for various drivers in the Linux kernel" \
-  FALSE module_compile "gcc, make, linux-headers, module-assistant" \
-  FALSE kernel_compile "programs needed for compiling the linux kernel" )
+	FALSE abiword "efficient, featureful word processor " \
+	FALSE alsamixergui "graphical soundcard mixer " \
+	FALSE asunder "graphical audio CD ripper and encoder " \
+	FALSE bleachbit "delete unnecessary files from the system " \
+	FALSE brasero "CD/DVD burning application for GNOME " \
+	FALSE clamav "anti-virus utility for Unix " \
+	FALSE cups "Common UNIX Printing System " \
+	FALSE deja_dup "Backup utility " \
+	FALSE evince "Document (PostScript, PDF) viewer " \
+	FALSE galternatives "graphical setup tool for the alternatives system " \
+	FALSE gdebi "simple tool to install deb files " \
+	FALSE gdmap "Tool to visualize diskspace " \
+	FALSE gftp "X/GTK+ and console FTP client " \
+	FALSE gimp "The GNU Image Manipulation Program " \
+	FALSE gkdebconf "Helper to reconfigure packages with Debconf " \
+	FALSE gnome_mplayer "GTK+ interface for MPlayer " \
+	FALSE gnome_system_tools "Cross-platform configuration utilities for GNOME " \
+	FALSE gnumeric "spreadsheet application for GNOME " \
+	FALSE gthumb "image viewer and browser " \
+	FALSE hardinfo "Displays system information " \
+	FALSE htop "interactive processes viewer " \
+	FALSE mc "Midnight Commander - a powerful file manager " \
+	FALSE tilda "terminal emulator with first person shooter console likeness " \
+	FALSE transmission "lightweight BitTorrent client " \
+	FALSE virtualbox "x86 virtualization solution " \
+	FALSE vnc "Virtual network computing software " \
+	FALSE winff "graphical video and audio batch converter using ffmpeg " \
+	FALSE xchat "IRC client for X similar to AmIRC " \
+	FALSE xsane "featureful graphical frontend for SANE " \
+	FALSE xscreensaver "Automatic screensaver for X " \
+	FALSE zenmap "The Network Mapper Front End " )
 echo "$ans"
 
 
 # this needs to be here in case the list is cancelled or ok'd with no selections.
 if [[ -z $ans ]]; then
-    exit 0
+    choose_task
+    return
 fi
 
 # Put all selected package lists into an install list.
-if $(echo $ans | grep -q Synaptic) ; then
-    remove_list=("${remove_list[@]}"  "${Synaptic[@]}")
+if $(echo $ans | grep -q deja_dup) ; then
+    remove_list=("${remove_list[@]}"  "${deja_dup[@]}")
 fi
 
-if $(echo $ans | grep -q instant_message) ; then
-    remove_list=("${remove_list[@]}"  "${instant_message[@]}")
+if $(echo $ans | grep -q mc) ; then
+    remove_list=("${remove_list[@]}"  "${mc[@]}")
 fi
 
-if $(echo $ans | grep -q flash_vid) ; then
-    remove_list=("${remove_list[@]}"  "${flash_vid[@]}")
+if $(echo $ans | grep -q gdmap) ; then
+    remove_list=("${remove_list[@]}"  "${gdmap[@]}")
 fi
 
-if $(echo $ans | grep -q java_free) ; then
-    remove_list=("${install_list[@]}"  "${java_free[@]}")
+if $(echo $ans | grep -q tilda) ; then
+    remove_list=("${remove_list[@]}"  "${tilda[@]}")
 fi
 
-if $(echo $ans | grep -q java_nonfree) ; then
-    remove_list=("${install_list[@]}"  "${java_nonfree[@]}")
+if $(echo $ans | grep -q gimp) ; then
+    remove_list=("${remove_list[@]}"  "${gimp[@]}")
 fi
 
-if $(echo $ans | grep -q gnome_games) ; then
-    remove_list=("${remove_list[@]}"  "${gnome_games[@]}")
+if $(echo $ans | grep -q xsane) ; then
+    remove_list=("${remove_list[@]}"  "${xsane[@]}")
 fi
 
-if $(echo $ans | grep -q cd_rip) ; then
-    remove_list=("${remove_list[@]}"  "${cd_rip[@]}")
+if $(echo $ans | grep -q evince) ; then
+    remove_list=("${remove_list[@]}"  "${evince[@]}")
 fi
 
-#if $(echo $ans | grep -q dvd_set) ; then
-#    remove_list=("${remove_list[@]}"  "${dvd_set[@]}")
-#fi
-
-if $(echo $ans | grep -q graphics) ; then
-    remove_list=("${remove_list[@]}"  "${graphics[@]}")
+if $(echo $ans | grep -q gftp) ; then
+    remove_list=("${remove_list[@]}"  "${gftp[@]}")
 fi
 
-if $(echo $ans | grep -q animation) ; then
-    remove_list=("${remove_list[@]}"  "${animation[@]}")
+if $(echo $ans | grep -q transmission) ; then
+    remove_list=("${remove_list[@]}"  "${transmission[@]}")
 fi
 
-if $(echo $ans | grep -q HP_printer) ; then
-    remove_list=("${remove_list[@]}"  "${HP_printer[@]}")
+if $(echo $ans | grep -q zenmap) ; then
+    remove_list=("${remove_list[@]}"  "${zenmap[@]}")
 fi
 
-if $(echo $ans | grep -q word_processor) ; then
-    remove_list=("${remove_list[@]}"  "${word_processor[@]}")
+if $(echo $ans | grep -q xchat) ; then
+    remove_list=("${remove_list[@]}"  "${xchat[@]}")
 fi
 
-if $(echo $ans | grep -q spreadsheet) ; then
-    remove_list=("${remove_list[@]}"  "${spreadsheet[@]}")
+if $(echo $ans | grep -q vnc) ; then
+    remove_list=("${remove_list[@]}"  "${vnc[@]}")
 fi
 
-if $(echo $ans | grep -q office_suite) ; then
-    remove_list=("${remove_list[@]}"  "${office_suite[@]}")
+if $(echo $ans | grep -q asunder) ; then
+    remove_list=("${remove_list[@]}"  "${asunder[@]}")
 fi
 
-if $(echo $ans | grep -q email_light) ; then
-    remove_list=("${remove_list[@]}"  "${email_light[@]}")
+if $(echo $ans | grep -q brasero) ; then
+    remove_list=("${remove_list[@]}"  "${brasero[@]}")
 fi
 
-if $(echo $ans | grep -q email_heavy) ; then
-    remove_list=("${remove_list[@]}"  "${email_heavy[@]}")
+if $(echo $ans | grep -q gnome_mplayer) ; then
+    remove_list=("${remove_list[@]}"  "${gnome_mplayer[@]}")
 fi
 
-if $(echo $ans | grep -q nvidia_driver) ; then
-    remove_list=("${remove_list[@]}"  "${nvidia_driver[@]}")
+if $(echo $ans | grep -q winff) ; then
+    remove_list=("${remove_list[@]}"  "${winff[@]}")
 fi
 
-if $(echo $ans | grep -q file_share_win) ; then
-    remove_list=("${remove_list[@]}"  "${file_share_win[@]}")
+if $(echo $ans | grep -q alsamixergui) ; then
+    remove_list=("${remove_list[@]}"  "${alsamixergui[@]}")
 fi
 
-if $(echo $ans | grep -q file_share_lin) ; then
-    remove_list=("${remove_list[@]}"  "${file_share_lin[@]}")
+if $(echo $ans | grep -q abiword) ; then
+    remove_list=("${remove_list[@]}"  "${abiword[@]}")
 fi
 
-if $(echo $ans | grep -q firmware_nonfree) ; then
-    remove_list=("${remove_list[@]}"  "${firmware_nonfree[@]}")
+if $(echo $ans | grep -q gnumeric) ; then
+    remove_list=("${remove_list[@]}"  "${gnumeric[@]}")
 fi
 
-if $(echo $ans | grep -q module_compile) ; then
-    remove_list=("${remove_list[@]}"  "${module_comp[@]}")
+if $(echo $ans | grep -q galternatives) ; then
+    remove_list=("${remove_list[@]}"  "${galternatives[@]}")
 fi
 
-if $(echo $ans | grep -q kernel_compile) ; then
-    remove_list=("${remove_list[@]}"  "${kernel_comp[@]}")
+if $(echo $ans | grep -q bleachbit) ; then
+    remove_list=("${remove_list[@]}"  "${bleachbit[@]}")
 fi
 
+if $(echo $ans | grep -q gdebi) ; then
+    remove_list=("${remove_list[@]}"  "${gdebi[@]}")
+fi
+
+if $(echo $ans | grep -q gkdebconf) ; then
+    remove_list=("${remove_list[@]}"  "${gkdebconf[@]}")
+fi
+
+if $(echo $ans | grep -q htop) ; then
+    remove_list=("${remove_list[@]}"  "${htop[@]}")
+fi
+
+if $(echo $ans | grep -q hardinfo) ; then
+    remove_list=("${remove_list[@]}"  "${hardinfo[@]}")
+fi
+
+if $(echo $ans | grep -q gnome_system_tools) ; then
+    remove_list=("${remove_list[@]}"  "${gnome_system_tools[@]}")
+fi
+
+if $(echo $ans | grep -q clamav) ; then
+    remove_list=("${remove_list[@]}"  "${clamav[@]}")
+fi
+
+if $(echo $ans | grep -q xscreensaver) ; then
+    remove_list=("${remove_list[@]}"  "${xscreensaver[@]}")
+fi
+
+if $(echo $ans | grep -q virtualbox) ; then
+    remove_list=("${remove_list[@]}"  "${virtualbox[@]}")
+fi
+
+if $(echo $ans | grep -q cups) ; then
+    remove_list=("${remove_list[@]}"  "${cups[@]}")
+fi
+
+if $(echo $ans | grep -q gthumb) ; then
+    remove_list=("${remove_list[@]}"  "${gthumb[@]}")
+fi
 
 
 echo "${remove_list[@]}"
@@ -316,35 +410,241 @@ echo "${remove_list[@]}"
 zenity --question --text="$(aptitude -s purge ${remove_list[@]} &)"
 if [[ $? = 0 ]] ; then
     aptitude -y purge ${remove_list[@]}  | tee >(zenity --progress --pulsate)
-else
-    echo "You said no."
-    exit 0
+    kill $(pgrep zenity)
 fi
 
-exit 0
+choose_task
 }
 
 
-#
-# The action starts here...
-#
+check_status () {
+ans=$(zenity --list --title="Installation Status" --text " Check the installation status of selected packages. 
 
-# Check that user is root.
-[[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
+" --checklist \
+  --ok-label=OK --cancel-label=Cancel --width=520 --height=360 \
+  --column "Pick" --column "Package Group" --column "Description" \
+  --separator " " \
+	FALSE abiword "efficient, featureful word processor " \
+	FALSE alsamixergui "graphical soundcard mixer " \
+	FALSE asunder "graphical audio CD ripper and encoder " \
+	FALSE bleachbit "delete unnecessary files from the system " \
+	FALSE brasero "CD/DVD burning application for GNOME " \
+	FALSE clamav "anti-virus utility for Unix " \
+	FALSE cups "Common UNIX Printing System " \
+	FALSE deja_dup "Backup utility " \
+	FALSE evince "Document (PostScript, PDF) viewer " \
+	FALSE galternatives "graphical setup tool for the alternatives system " \
+	FALSE gdebi "simple tool to install deb files " \
+	FALSE gdmap "Tool to visualize diskspace " \
+	FALSE gftp "X/GTK+ and console FTP client " \
+	FALSE gimp "The GNU Image Manipulation Program " \
+	FALSE gkdebconf "Helper to reconfigure packages with Debconf " \
+	FALSE gnome_mplayer "GTK+ interface for MPlayer " \
+	FALSE gnome_system_tools "Cross-platform configuration utilities for GNOME " \
+	FALSE gnumeric "spreadsheet application for GNOME " \
+	FALSE gthumb "image viewer and browser " \
+	FALSE hardinfo "Displays system information " \
+	FALSE htop "interactive processes viewer " \
+	FALSE mc "Midnight Commander - a powerful file manager " \
+	FALSE tilda "terminal emulator with first person shooter console likeness " \
+	FALSE transmission "lightweight BitTorrent client " \
+	FALSE virtualbox "x86 virtualization solution " \
+	FALSE vnc "Virtual network computing software " \
+	FALSE winff "graphical video and audio batch converter using ffmpeg " \
+	FALSE xchat "IRC client for X similar to AmIRC " \
+	FALSE xsane "featureful graphical frontend for SANE " \
+	FALSE xscreensaver "Automatic screensaver for X " \
+	FALSE zenmap "The Network Mapper Front End " )
+echo "$ans"
 
 
-# Choose update, install or remove software
+# this needs to be here in case the list is cancelled or ok'd with no selections.
+if [[ -z $ans ]]; then
+    choose_task
+    return
+fi
+
+# Put all selected package lists into an install list.
+if $(echo $ans | grep -q deja_dup) ; then
+    query_list=("${query_list[@]}"  "${deja_dup[@]}")
+fi
+
+if $(echo $ans | grep -q mc) ; then
+    query_list=("${query_list[@]}"  "${mc[@]}")
+fi
+
+if $(echo $ans | grep -q gdmap) ; then
+    query_list=("${query_list[@]}"  "${gdmap[@]}")
+fi
+
+if $(echo $ans | grep -q tilda) ; then
+    query_list=("${query_list[@]}"  "${tilda[@]}")
+fi
+
+if $(echo $ans | grep -q gimp) ; then
+    query_list=("${query_list[@]}"  "${gimp[@]}")
+fi
+
+if $(echo $ans | grep -q xsane) ; then
+    query_list=("${query_list[@]}"  "${xsane[@]}")
+fi
+
+if $(echo $ans | grep -q evince) ; then
+    query_list=("${query_list[@]}"  "${evince[@]}")
+fi
+
+if $(echo $ans | grep -q gftp) ; then
+    query_list=("${query_list[@]}"  "${gftp[@]}")
+fi
+
+if $(echo $ans | grep -q transmission) ; then
+    query_list=("${query_list[@]}"  "${transmission[@]}")
+fi
+
+if $(echo $ans | grep -q zenmap) ; then
+    query_list=("${query_list[@]}"  "${zenmap[@]}")
+fi
+
+if $(echo $ans | grep -q xchat) ; then
+    query_list=("${query_list[@]}"  "${xchat[@]}")
+fi
+
+if $(echo $ans | grep -q vnc) ; then
+    query_list=("${query_list[@]}"  "${vnc[@]}")
+fi
+
+if $(echo $ans | grep -q asunder) ; then
+    query_list=("${query_list[@]}"  "${asunder[@]}")
+fi
+
+if $(echo $ans | grep -q brasero) ; then
+    query_list=("${query_list[@]}"  "${brasero[@]}")
+fi
+
+if $(echo $ans | grep -q gnome_mplayer) ; then
+    query_list=("${query_list[@]}"  "${gnome_mplayer[@]}")
+fi
+
+if $(echo $ans | grep -q winff) ; then
+    query_list=("${query_list[@]}"  "${winff[@]}")
+fi
+
+if $(echo $ans | grep -q alsamixergui) ; then
+    query_list=("${query_list[@]}"  "${alsamixergui[@]}")
+fi
+
+if $(echo $ans | grep -q abiword) ; then
+    query_list=("${query_list[@]}"  "${abiword[@]}")
+fi
+
+if $(echo $ans | grep -q gnumeric) ; then
+    query_list=("${query_list[@]}"  "${gnumeric[@]}")
+fi
+
+if $(echo $ans | grep -q galternatives) ; then
+    query_list=("${query_list[@]}"  "${galternatives[@]}")
+fi
+
+if $(echo $ans | grep -q bleachbit) ; then
+    query_list=("${query_list[@]}"  "${bleachbit[@]}")
+fi
+
+if $(echo $ans | grep -q gdebi) ; then
+    query_list=("${query_list[@]}"  "${gdebi[@]}")
+fi
+
+if $(echo $ans | grep -q gkdebconf) ; then
+    query_list=("${query_list[@]}"  "${gkdebconf[@]}")
+fi
+
+if $(echo $ans | grep -q htop) ; then
+    query_list=("${query_list[@]}"  "${htop[@]}")
+fi
+
+if $(echo $ans | grep -q hardinfo) ; then
+    query_list=("${query_list[@]}"  "${hardinfo[@]}")
+fi
+
+if $(echo $ans | grep -q gnome_system_tools) ; then
+    query_list=("${query_list[@]}"  "${gnome_system_tools[@]}")
+fi
+
+if $(echo $ans | grep -q clamav) ; then
+    query_list=("${query_list[@]}"  "${clamav[@]}")
+fi
+
+if $(echo $ans | grep -q xscreensaver) ; then
+    query_list=("${query_list[@]}"  "${xscreensaver[@]}")
+fi
+
+if $(echo $ans | grep -q virtualbox) ; then
+    query_list=("${query_list[@]}"  "${virtualbox[@]}")
+fi
+
+if $(echo $ans | grep -q cups) ; then
+    query_list=("${query_list[@]}"  "${cups[@]}")
+fi
+
+if $(echo $ans | grep -q gthumb) ; then
+    query_list=("${query_list[@]}"  "${gthumb[@]}")
+fi
+
+
+echo "here's the list: ${query_list[@]}"
+
+
+if [[ -f status_list.tmp ]] ; then
+	rm status_list.tmp
+fi
+
+for i in $(echo ${query_list[@]}) ; do
+	if dpkg -l | grep "$i" ; then
+		echo "$i is installed" >> status_list.tmp
+	else
+		echo "$i is NOT installed" >> status_list.tmp
+	fi
+done
+
+cat status_list.tmp | zenity --text-info
+query_list=()
+rm status_list.tmp
+choose_task
+}
+
+remove_unused_configs () {
+ctext=$(aptitude search ~c)
+
+if [[ -z $ctext ]] ; then
+	ctext="There are no unused config files.
+
+Press CANCEL"
+fi
+
+zenity --question --text="$ctext"   --ok-label=OK --cancel-label=Cancel --title="Remove unused configs?"
+if [[ $? = 0 ]] ; then
+    aptitude -y purge ~c  | tee >(zenity --progress --pulsate)
+    kill $(pgrep zenity)
+fi
+
+choose_task
+}
+
+# Choose update, install, remove software or check installation status
+choose_task () {
 run_task=$(zenity --list --title="$version" \
-  --ok-label=OK --cancel-label=Exit --width=320 --height=270 --radiolist \
+  --ok-label=OK --cancel-label=Exit --width=320 --height=305 --radiolist \
   --text="Before installing new software, the system should be updated. If you 
 haven't done this recently (i.e. in the last 24 hours) you should run the update now.
-Otherwise, you can choose to install or remove software
+Otherwise, you can choose to install or remove software or check the
+status of a package. 
 
 Click OK to proceed, or Cancel to exit the program." \
   --column "Choose Task" --column "Description" \
   TRUE  	update \
   FALSE 	install_software \
-  FALSE 	remove_software )
+  FALSE 	remove_software \
+  FALSE		check_status \
+  FALSE		remove_unused_configs)
 
 if $(echo $run_task | grep -q install_software) ; then
 	install_packages
@@ -356,5 +656,24 @@ fi
 
 if $(echo $run_task | grep -q update) ; then
     aptitude update | tee >(zenity --progress --pulsate)
+    kill $(pgrep zenity)
+    choose_task
 fi
 
+if $(echo $run_task | grep -q check_status) ; then
+	check_status
+fi
+
+if $(echo $run_task | grep -q remove_unused_configs) ; then
+	remove_unused_configs
+fi
+}
+
+#
+# The action starts here...
+#
+
+# Check that user is root.
+[[ $(id -u) -eq 0 ]] || { printf "\t You need to be root!\n" ; exit 1 ; }
+
+choose_task
