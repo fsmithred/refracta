@@ -1,9 +1,8 @@
-This repository contains scripts and maybe other stuff for refracta linux.
-http://www.ibiblio.org/refracta
+See new repositories:
+https://github.com/fsmithred
 
-A clone of the repo is included in Refracta-6.0.6 to allow you to get updated versions of some scripts or packages when they are available. It can be found at /home/github/refracta
+Download packages or isos:
+https://sourceforge.net/projects/refracta/files/
 
-To update the files in your local folder, open a terminal and enter the following commands:
-  cd /home/github/refracta
-  git pull origin master
-Then, either copy the desired file into place or install any new .deb files you want.
+fsmithred 04 Feb 2017
+
