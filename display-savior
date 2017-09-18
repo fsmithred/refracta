@@ -148,7 +148,7 @@ while true; do
     g) resolution="${resolution[@]} \"1440x900\" " ; break ;;
     h) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
     i) resolution="${resolution[@]} \"1600x1024\" " ; break ;;
-    j) echo "Enter a custom resolution:  "
+    x) echo "Enter a custom resolution:  "
          read custom_res
          resolution="${resolution[@]} \"$custom_res\" " ; break ;;
     *) break ;;
